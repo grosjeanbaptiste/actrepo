@@ -104,7 +104,7 @@ fn respell(kept: &mut [Entry], repos: &[PathBuf]) {
     }
 }
 
-fn write_atomically(registry: &Path, entries: &[Entry]) -> Result<()> {
+pub(crate) fn write_atomically(registry: &Path, entries: &[Entry]) -> Result<()> {
     let dir = registry.parent().unwrap_or(Path::new("."));
     fs::create_dir_all(dir).with_context(|| format!("mkdir {}", dir.display()))?;
     let mut lines: Vec<String> = entries
