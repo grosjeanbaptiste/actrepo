@@ -193,3 +193,20 @@ fn the_message_matches_the_bash_wording_with_a_symbol_not_an_emoji() {
     let s = Summary { added: 2, unchanged: 3, removed: 1, warnings: vec![] };
     assert_eq!(s.message(Path::new("/r/projects.txt")), "✓ Scan complete: 2 added, 3 unchanged, 1 removed (stale paths). Registry: /r/projects.txt");
 }
+
+// A case-insensitive disk (macOS default) lets one directory carry two spellings.
+#[cfg(target_os = "macos")]
+#[test]
+fn an_entry_spelled_in_another_case_is_the_same_repo_not_a_new_one() {
+    let f = fx();
+    let real = mkrepo(&f.root, "alpha");
+    let old = f.root.join("ALPHA");
+    ok(fs::create_dir_all(f.registry.parent().unwrap_or(&f.root)));
+    ok(fs::write(
+        &f.registry,
+        format!("ALPHA|{}\nalpha|{}\n", old.display(), real.display()),
+    ));
+    let s = run(&f);
+    assert_eq!((s.added, s.removed), (0, 0));
+    assert_eq!(lines(&f.registry), [format!("alpha|{}", real.display())]);
+}

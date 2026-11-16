@@ -67,6 +67,43 @@ fn worktree_registered(
         .any(|w| registered.iter().any(|r| r == w))
 }
 
+/// True when both paths are the same directory, the same inode.
+fn same_dir(a: &Path, b: &Path) -> bool {
+    use std::os::unix::fs::MetadataExt;
+    match (fs::metadata(a), fs::metadata(b)) {
+        (Ok(x), Ok(y)) => (x.dev(), x.ino()) == (y.dev(), y.ino()),
+        _ => false,
+    }
+}
+
+fn name_of(repo: &Path) -> String {
+    repo.file_name().map_or_else(
+        || repo.display().to_string(),
+        |n| n.to_string_lossy().into_owned(),
+    )
+}
+
+/// A case-insensitive disk gives one directory several spellings. An entry
+/// that is a discovered repo under another case is rewritten to the on-disk
+/// spelling, so it is neither re-added beside itself nor left misspelled.
+/// Other aliases (a symlink) keep the registry's own spelling.
+fn respell(kept: &mut [Entry], repos: &[PathBuf]) {
+    for e in kept.iter_mut() {
+        let spelled = e.path.to_string_lossy();
+        let found = repos.iter().find(|r| {
+            **r != e.path
+                && r.to_string_lossy().eq_ignore_ascii_case(&spelled)
+                && same_dir(r, &e.path)
+        });
+        if let Some(r) = found {
+            *e = Entry {
+                name: name_of(r),
+                path: r.clone(),
+            };
+        }
+    }
+}
+
 fn write_atomically(registry: &Path, entries: &[Entry]) -> Result<()> {
     let dir = registry.parent().unwrap_or(Path::new("."));
     fs::create_dir_all(dir).with_context(|| format!("mkdir {}", dir.display()))?;
@@ -90,20 +127,22 @@ pub fn scan(registry: &Path, roots: &[PathBuf], exec: &impl Exec) -> Result<Summ
         read(registry)?.into_iter().partition(|e| e.path.is_dir());
     summary.removed = stale.len();
     let mut kept = live;
+    let mut discovered = Vec::new();
     for root in roots {
         let found = discover(root);
         summary.warnings.extend(found.unreadable);
-        for repo in found.repos {
+        discovered.push(found.repos);
+    }
+    respell(&mut kept, &discovered.concat());
+    for repos in discovered {
+        for repo in repos {
             if kept.iter().any(|e| e.path == repo)
                 || worktree_registered(exec, &repo, &kept, &mut summary.warnings)
             {
                 summary.unchanged += 1;
                 continue;
             }
-            let name = repo.file_name().map_or_else(
-                || repo.display().to_string(),
-                |n| n.to_string_lossy().into_owned(),
-            );
+            let name = name_of(&repo);
             kept.push(Entry { name, path: repo });
             summary.added += 1;
         }
