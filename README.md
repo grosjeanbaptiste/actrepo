@@ -36,7 +36,7 @@ repo list | scan [ROOT...] | status [NAME]      # machine-wide project registry 
 repo rename-branch [PATH] [--from master] [--to main] [--dry-run] [--delete-old]   # default branch, local + GitHub
 repo push [--dir PATH] [--dry-run] [--yes]      # push every nested repo that is clean and ahead; asks first
 repo pr create [--base B] [--title T] [--body D]    # PR for the current branch; title/description asked on stdin if not given
-repo pr merge [N] [--yes]                           # merge commit, branch deleted, base fast-forwarded locally, a clean worktree holding the branch removed (one with changes is kept, with a warning)
+repo pr merge [N] [--yes]                           # merge commit, branch deleted, base fast-forwarded locally, then, only once the head is verified contained in origin/BASE: the clean worktree holding it, the local branch and a leftover remote branch removed (a worktree with changes is kept, with a warning)
 repo worktree prune [--base main] [-n]               # remove each clean worktree whose pushed branch is contained in origin/BASE, and the branch; `repo pr merge` runs it
 repo workspace list | status | push [-n]            # folders of the nearest *.code-workspace ($DOTFILES_WORKSPACE_FILE overrides)
 repo workspace add NAME [--clone URL | --init TYPE] # adopt ./NAME, or clone / scaffold it first
