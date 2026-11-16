@@ -19,6 +19,9 @@ fn linked(probe: &impl Exec, dir: &Path, base: &str) -> Result<Vec<Linked>> {
     let mut found = Vec::new();
     for block in list.split("\n\n").skip(1) {
         let field = |key: &str| block.lines().find_map(|l| l.strip_prefix(key));
+        if block.lines().any(|l| l.starts_with("prunable")) {
+            continue; // its folder is gone: `git worktree prune` forgets it, nothing to remove
+        }
         let (Some(path), Some(branch)) = (field("worktree "), field("branch refs/heads/")) else {
             continue; // detached or bare: no branch to judge
         };

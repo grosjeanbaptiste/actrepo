@@ -223,3 +223,13 @@ fn a_failing_fetch_is_an_error_naming_it() {
             .contains("git fetch -p")
     );
 }
+
+#[test]
+fn a_worktree_whose_folder_is_gone_is_skipped_not_an_error() {
+    let w = world();
+    let wt = feature(&w, "feat", true);
+    merge_on_remote(&w, "feat");
+    ok(fs::remove_dir_all(&wt));
+    let (r, out) = prune_in(&w, false);
+    assert_eq!(ok(r), 0, "{out}");
+}
