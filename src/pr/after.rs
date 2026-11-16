@@ -33,6 +33,7 @@ pub fn update(
         None => advance_here(&git, base, err)?,
         Some(path) => advance_there(probe, act, dir, &path, base, err)?,
     };
+    ok &= release_head(probe, act, dir, head, err)?;
     ok &= delete_head(probe, &git, dir, head, err)?;
     if ok {
         Ok(())
@@ -82,15 +83,7 @@ fn advance_there(
     let h = holder.display().to_string();
     let remote = format!("origin/{base}");
     let mut ok = true;
-    if !probe
-        .run(
-            "git",
-            &["--no-optional-locks", "-C", &h, "status", "--porcelain"],
-            None,
-        )?
-        .trim()
-        .is_empty()
-    {
+    if has_changes(probe, holder)? {
         writeln!(
             err,
             "warning: PR merged; {base} is not updated: its worktree {h} has local changes."
@@ -110,6 +103,46 @@ fn advance_there(
         & act
             .run("git", &["checkout", "--detach", &remote], Some(dir))
             .is_ok())
+}
+
+/// Uncommitted or untracked files in the worktree at `path`.
+fn has_changes(probe: &impl Exec, path: &Path) -> Result<bool> {
+    let p = path.display().to_string();
+    let status = ["--no-optional-locks", "-C", &p, "status", "--porcelain"];
+    Ok(!probe.run("git", &status, None)?.trim().is_empty())
+}
+
+/// A worktree that still holds the merged head branch is removed, so the branch
+/// can go. One with local changes is kept and reported: nothing is forced.
+fn release_head(
+    probe: &impl Exec,
+    act: &impl Exec,
+    dir: &Path,
+    head: &str,
+    err: &mut impl Write,
+) -> Result<bool> {
+    let Some(path) = holder(probe, dir, head)? else {
+        return Ok(true);
+    };
+    let p = path.display();
+    if has_changes(probe, &path)? {
+        writeln!(
+            err,
+            "warning: PR merged; worktree {p} has local changes, so it and {head} are kept."
+        )?;
+        return Ok(false);
+    }
+    if act
+        .run("git", &["worktree", "remove", &p.to_string()], Some(dir))
+        .is_err()
+    {
+        writeln!(
+            err,
+            "warning: PR merged; worktree {p} could not be removed."
+        )?;
+        return Ok(false);
+    }
+    Ok(true)
 }
 
 /// `gh pr merge --delete-branch` may have deleted it already: only a branch that
