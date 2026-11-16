@@ -181,3 +181,50 @@ fn the_checkout_running_the_update_is_not_its_own_holder() {
     assert_eq!(git(&w.work, &["rev-parse", "--abbrev-ref", "HEAD"]), "main", "not detached");
     assert_eq!(git(&w.work, &["log", "-1", "--format=%s"]), "merge feature");
 }
+
+/// `work` leaves `feature`, which another worktree then holds.
+fn head_held_elsewhere(w: &World) -> PathBuf {
+    let feature_wt = w.base.join("feature-wt");
+    git(&w.work, &["checkout", "-q", "main"]);
+    git(&w.work, &["worktree", "add", "-q", &feature_wt.display().to_string(), "feature"]);
+    feature_wt
+}
+
+#[test]
+fn a_clean_worktree_holding_the_merged_head_is_removed_with_its_branch() {
+    let w = world();
+    let feature_wt = head_held_elsewhere(&w);
+    let (r, _, err) = update_in(&w, &w.work);
+    assert!(r.is_ok(), "{err}");
+    assert!(!feature_wt.exists(), "worktree still there");
+    assert!(!branch_exists(&w.work, "feature"));
+}
+
+#[test]
+fn a_dirty_worktree_holding_the_merged_head_is_kept_with_a_warning() {
+    let w = world();
+    let feature_wt = head_held_elsewhere(&w);
+    ok(fs::write(feature_wt.join("scratch"), "wip"));
+    let (r, _, err) = update_in(&w, &w.work);
+    assert!(r.is_err());
+    assert!(err.contains("warning: PR merged; worktree") && err.contains("has local changes"), "{err}");
+    assert!(feature_wt.join("scratch").exists());
+    assert!(branch_exists(&w.work, "feature"));
+}
+
+#[test]
+fn another_merged_worktree_is_pruned_by_the_same_call() {
+    let w = world();
+    git(&w.work, &["checkout", "-q", "main"]);
+    let other = w.base.join("older-wt");
+    git(&w.work, &["worktree", "add", "-q", "-b", "older", &other.display().to_string(), "main"]);
+    commit(&other, "older");
+    git(&other, &["push", "-q", "-u", "origin", "older"]);
+    let helper = w.base.join("helper");
+    git(&helper, &["pull", "-q"]);
+    git(&helper, &["merge", "-q", "--no-ff", "-m", "merge older", "origin/older"]);
+    git(&helper, &["push", "-q", "origin", "main"]);
+    let (r, out, err) = update_in(&w, &w.work);
+    assert!(r.is_ok(), "{err}");
+    assert!(out.contains("removed") && !other.exists() && !branch_exists(&w.work, "older"), "{out}");
+}
