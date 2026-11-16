@@ -211,3 +211,20 @@ fn a_dirty_worktree_holding_the_merged_head_is_kept_with_a_warning() {
     assert!(feature_wt.join("scratch").exists());
     assert!(branch_exists(&w.work, "feature"));
 }
+
+#[test]
+fn another_merged_worktree_is_pruned_by_the_same_call() {
+    let w = world();
+    git(&w.work, &["checkout", "-q", "main"]);
+    let other = w.base.join("older-wt");
+    git(&w.work, &["worktree", "add", "-q", "-b", "older", &other.display().to_string(), "main"]);
+    commit(&other, "older");
+    git(&other, &["push", "-q", "-u", "origin", "older"]);
+    let helper = w.base.join("helper");
+    git(&helper, &["pull", "-q"]);
+    git(&helper, &["merge", "-q", "--no-ff", "-m", "merge older", "origin/older"]);
+    git(&helper, &["push", "-q", "origin", "main"]);
+    let (r, out, err) = update_in(&w, &w.work);
+    assert!(r.is_ok(), "{err}");
+    assert!(out.contains("removed") && !other.exists() && !branch_exists(&w.work, "older"), "{out}");
+}

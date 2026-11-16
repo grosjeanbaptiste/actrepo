@@ -18,6 +18,7 @@ mod root;
 mod run;
 mod scaffold;
 mod workspace;
+mod worktree;
 
 use actautoma::{gh::Gh, process::ProcessRunner};
 use actit::forge_names::ForgeNames;
@@ -193,9 +194,26 @@ enum Cmd {
         #[command(subcommand)]
         sub: WsCmd,
     },
+    /// Linked worktrees: remove the ones whose branch is merged.
+    Worktree {
+        #[command(subcommand)]
+        sub: WtCmd,
+    },
     /// Any other command goes to `dotfiles project` (list, status, pr, doctor, …).
     #[command(external_subcommand)]
     Other(Vec<String>),
+}
+
+#[derive(Subcommand)]
+enum WtCmd {
+    /// Remove each clean worktree whose pushed branch is contained in origin/BASE, and the branch.
+    Prune {
+        #[arg(long, default_value = "main")]
+        base: String,
+        /// Say what would be removed; touch nothing.
+        #[arg(long, short = 'n')]
+        dry_run: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -254,6 +272,9 @@ fn main() -> Result<()> {
             PrCmd::Merge { number, yes } => {
                 pr::command::run_merge(&pr::merge::Opts { number, yes })
             }
+        },
+        Cmd::Worktree { sub } => match sub {
+            WtCmd::Prune { base, dry_run } => worktree::command::run_prune(&base, dry_run),
         },
         Cmd::Workspace { sub } => match sub {
             WsCmd::List => workspace::command::run_list(),

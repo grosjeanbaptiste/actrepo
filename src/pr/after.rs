@@ -2,6 +2,7 @@
 //! by then, so every failing step is reported and the call fails, but none
 //! hides that the merge itself succeeded.
 use crate::scaffold::setup::Exec;
+use crate::worktree::prune::prune;
 use anyhow::{Result, bail};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -35,6 +36,7 @@ pub fn update(
     };
     ok &= release_head(probe, act, dir, head, err)?;
     ok &= delete_head(probe, &git, dir, head, err)?;
+    ok &= sweep_merged(probe, act, dir, base, out, err)?;
     if ok {
         Ok(())
     } else {
@@ -105,8 +107,29 @@ fn advance_there(
             .is_ok())
 }
 
+/// Other worktrees whose branch got merged earlier (by any tool) go too.
+fn sweep_merged(
+    probe: &impl Exec,
+    act: &impl Exec,
+    dir: &Path,
+    base: &str,
+    out: &mut impl Write,
+    err: &mut impl Write,
+) -> Result<bool> {
+    match prune(probe, act, dir, base, false, out) {
+        Ok(_) => Ok(true),
+        Err(e) => {
+            writeln!(
+                err,
+                "warning: PR merged; merged worktrees were not pruned: {e:#}"
+            )?;
+            Ok(false)
+        }
+    }
+}
+
 /// Uncommitted or untracked files in the worktree at `path`.
-fn has_changes(probe: &impl Exec, path: &Path) -> Result<bool> {
+pub(crate) fn has_changes(probe: &impl Exec, path: &Path) -> Result<bool> {
     let p = path.display().to_string();
     let status = ["--no-optional-locks", "-C", &p, "status", "--porcelain"];
     Ok(!probe.run("git", &status, None)?.trim().is_empty())

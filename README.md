@@ -37,6 +37,7 @@ repo rename-branch [PATH] [--from master] [--to main] [--dry-run] [--delete-old]
 repo push [--dir PATH] [--dry-run] [--yes]      # push every nested repo that is clean and ahead; asks first
 repo pr create [--base B] [--title T] [--body D]    # PR for the current branch; title/description asked on stdin if not given
 repo pr merge [N] [--yes]                           # merge commit, branch deleted, base fast-forwarded locally, a clean worktree holding the branch removed (one with changes is kept, with a warning)
+repo worktree prune [--base main] [-n]               # remove each clean worktree whose pushed branch is contained in origin/BASE, and the branch; `repo pr merge` runs it
 repo workspace list | status | push [-n]            # folders of the nearest *.code-workspace ($DOTFILES_WORKSPACE_FILE overrides)
 repo workspace add NAME [--clone URL | --init TYPE] # adopt ./NAME, or clone / scaffold it first
 repo workspace remove NAME                          # forget the folder; the directory stays
