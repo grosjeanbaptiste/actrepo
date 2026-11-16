@@ -74,7 +74,8 @@ pub fn prune(
         } else {
             act.run("git", &["worktree", "remove", &p], Some(dir))
                 .with_context(|| format!("removing {p}"))?;
-            act.run("git", &["branch", "-d", &w.branch], Some(dir))
+            // -D: containment in origin/BASE was just checked; -d would compare with the local HEAD, which may be behind
+            act.run("git", &["branch", "-D", &w.branch], Some(dir))
                 .with_context(|| format!("deleting {}", w.branch))?;
             writeln!(out, "removed {p} and {}", w.branch)?;
             removed += 1;

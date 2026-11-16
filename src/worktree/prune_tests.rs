@@ -233,3 +233,14 @@ fn a_worktree_whose_folder_is_gone_is_skipped_not_an_error() {
     let (r, out) = prune_in(&w, false);
     assert_eq!(ok(r), 0, "{out}");
 }
+
+#[test]
+fn a_merged_branch_is_deleted_even_when_the_local_head_does_not_contain_it() {
+    let w = world();
+    feature(&w, "feat", true);
+    merge_on_remote(&w, "feat");
+    git(&w.work, &["push", "-q", "origin", "--delete", "feat"]); // upstream gone, local main still behind
+    let (r, out) = prune_in(&w, false);
+    assert_eq!(ok(r), 1, "{out}");
+    assert!(!branch_exists(&w.work, "feat"), "{out}");
+}
