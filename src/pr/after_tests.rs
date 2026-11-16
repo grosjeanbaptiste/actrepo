@@ -432,3 +432,16 @@ fn a_remote_head_that_refuses_deletion_is_reported() {
         "{err}"
     );
 }
+
+#[test]
+fn a_worktree_whose_folder_is_gone_does_not_hold_the_base() {
+    let w = world();
+    let gone = w.base.join("gone-wt");
+    // work leaves main so a second worktree can hold it, then that folder disappears
+    git(&w.work, &["worktree", "add", "-q", &gone.display().to_string(), "main"]);
+    ok(fs::remove_dir_all(&gone));
+    let (r, _, err) = update_in(&w, &w.work);
+    assert!(r.is_ok(), "{err}");
+    assert_eq!(git(&w.work, &["log", "-1", "--format=%s"]), "merge feature");
+    assert!(!branch_exists(&w.work, "feature"));
+}

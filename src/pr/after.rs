@@ -23,6 +23,11 @@ pub fn update(
         writeln!(err, "warning: PR merged; git fetch failed.")?;
         bail!("git fetch failed after the merge");
     }
+    // forget worktrees whose folder is gone: git still lets them hold a branch
+    if git(&["worktree", "prune"]).is_err() {
+        writeln!(err, "warning: PR merged; git worktree prune failed.")?;
+        bail!("git worktree prune failed after the merge");
+    }
     let Ok(holder) = holder(probe, dir, base) else {
         writeln!(
             err,
@@ -53,11 +58,17 @@ pub fn update(
 fn holder(probe: &impl Exec, dir: &Path, branch: &str) -> Result<Option<PathBuf>> {
     let here = probe.run("git", &["rev-parse", "--show-toplevel"], Some(dir))?;
     let list = probe.run("git", &["worktree", "list", "--porcelain"], Some(dir))?;
-    let (wanted, mut path) = (format!("branch refs/heads/{branch}"), "");
-    for line in list.lines() {
-        if let Some(p) = line.strip_prefix("worktree ") {
-            path = p;
-        } else if line == wanted && Path::new(path) != Path::new(here.trim()) {
+    let wanted = format!("branch refs/heads/{branch}");
+    // a block marked `prunable` is a worktree whose folder is gone: it holds nothing
+    for block in list
+        .split("\n\n")
+        .filter(|b| !b.lines().any(|l| l.starts_with("prunable")))
+    {
+        let path = block
+            .lines()
+            .find_map(|l| l.strip_prefix("worktree "))
+            .unwrap_or("");
+        if block.lines().any(|l| l == wanted) && Path::new(path) != Path::new(here.trim()) {
             return Ok(Some(PathBuf::from(path)));
         }
     }
