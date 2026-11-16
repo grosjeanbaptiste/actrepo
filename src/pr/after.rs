@@ -34,9 +34,14 @@ pub fn update(
         None => advance_here(&git, base, err)?,
         Some(path) => advance_there(probe, act, dir, &path, base, err)?,
     };
-    ok &= release_head(probe, act, dir, head, err)?;
-    ok &= delete_head(probe, &git, dir, head, err)?;
-    ok &= sweep_merged(probe, act, dir, base, out, err)?;
+    if merge_verified(probe, dir, base, head, err)? {
+        ok &= release_head(probe, act, dir, head, err)?;
+        ok &= delete_head(probe, &git, dir, head, err)?;
+        ok &= delete_remote_head(probe, &git, dir, head, err)?;
+        ok &= sweep_merged(probe, act, dir, base, out, err)?;
+    } else {
+        ok = false;
+    }
     if ok {
         Ok(())
     } else {
@@ -105,6 +110,64 @@ fn advance_there(
         & act
             .run("git", &["checkout", "--detach", &remote], Some(dir))
             .is_ok())
+}
+
+fn ref_exists(probe: &impl Exec, dir: &Path, refname: &str) -> bool {
+    // an Err from show-ref is its answer "no such ref", not a failure
+    let args = ["show-ref", "--verify", "--quiet", refname];
+    probe.run("git", &args, Some(dir)).is_ok()
+}
+
+/// The merge is checked before anything is removed: the head's tip (local, else
+/// remote) must be contained in `origin/<base>`. A head that exists nowhere has
+/// nothing to protect.
+fn merge_verified(
+    probe: &impl Exec,
+    dir: &Path,
+    base: &str,
+    head: &str,
+    err: &mut impl Write,
+) -> Result<bool> {
+    let local = format!("refs/heads/{head}");
+    let remote = format!("refs/remotes/origin/{head}");
+    let Some(tip) = [local, remote]
+        .into_iter()
+        .find(|r| ref_exists(probe, dir, r))
+    else {
+        return Ok(true);
+    };
+    let base_ref = format!("origin/{base}");
+    // an Err from merge-base --is-ancestor is its answer "not contained"
+    let contained = ["merge-base", "--is-ancestor", &tip, &base_ref];
+    if probe.run("git", &contained, Some(dir)).is_ok() {
+        return Ok(true);
+    }
+    writeln!(
+        err,
+        "warning: PR merged; {head} is not contained in {base}, so its worktree and branches are kept."
+    )?;
+    Ok(false)
+}
+
+/// `gh pr merge --delete-branch` normally removed it; one left behind goes now that the merge is verified.
+fn delete_remote_head(
+    probe: &impl Exec,
+    git: &dyn Fn(&[&str]) -> Result<String>,
+    dir: &Path,
+    head: &str,
+    err: &mut impl Write,
+) -> Result<bool> {
+    if !ref_exists(probe, dir, &format!("refs/remotes/origin/{head}")) {
+        return Ok(true);
+    }
+    if git(&["push", "origin", "--delete", head]).is_ok() {
+        return Ok(true);
+    }
+    writeln!(
+        err,
+        "warning: PR merged; remote branch {head} was not deleted."
+    )?;
+    Ok(false)
 }
 
 /// Other worktrees whose branch got merged earlier (by any tool) go too.
