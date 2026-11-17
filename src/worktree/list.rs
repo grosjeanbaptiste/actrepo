@@ -4,6 +4,13 @@ use anyhow::Result;
 use serde_json::{Value, json};
 use std::path::Path;
 
+/// A live agent session working in a worktree.
+#[derive(Debug, PartialEq, Eq)]
+pub struct Owner {
+    pub id: String,
+    pub agent: String,
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub struct Worktree {
     pub path: String,
@@ -14,6 +21,8 @@ pub struct Worktree {
     pub detached: bool,
     /// Its folder is gone.
     pub prunable: bool,
+    /// `None` when owners were not asked for.
+    pub owners: Option<Vec<Owner>>,
 }
 
 pub fn parse(porcelain: &str) -> Vec<Worktree> {
@@ -30,6 +39,7 @@ pub fn parse(porcelain: &str) -> Vec<Worktree> {
                 main: i == 0,
                 detached: has("detached"),
                 prunable: has("prunable"),
+                owners: None,
             })
         })
         .collect()
@@ -48,7 +58,13 @@ pub fn text(all: &[Worktree]) -> String {
         .map(|w| {
             let at = w.branch.as_deref().unwrap_or("(detached)");
             let note = if w.prunable { "  (folder gone)" } else { "" };
-            format!("{}  {at}{note}\n", w.path)
+            let owners: String = w
+                .owners
+                .iter()
+                .flatten()
+                .map(|o| format!("    owner: {} {}\n", o.agent, o.id))
+                .collect();
+            format!("{}  {at}{note}\n{owners}", w.path)
         })
         .collect()
 }
@@ -56,7 +72,14 @@ pub fn text(all: &[Worktree]) -> String {
 pub fn json(all: &[Worktree]) -> Value {
     Value::Array(
         all.iter()
-            .map(|w| json!({"path": w.path, "branch": w.branch, "main": w.main, "detached": w.detached, "prunable": w.prunable}))
+            .map(|w| {
+                let mut row = json!({"path": w.path, "branch": w.branch, "main": w.main, "detached": w.detached, "prunable": w.prunable});
+                if let Some(owners) = &w.owners {
+                    let owners: Vec<Value> = owners.iter().map(|o| json!({"id": o.id, "agent": o.agent})).collect();
+                    row["owners"] = Value::Array(owners);
+                }
+                row
+            })
             .collect(),
     )
 }

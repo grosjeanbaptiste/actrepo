@@ -1,5 +1,6 @@
 //! The real ports of `repo worktree`: git on the process, stdout.
 use super::list::{json, list, text};
+use super::owners::{assign, live};
 use super::prune::prune;
 use crate::scaffold::native::{Process, Quiet};
 use anyhow::Result;
@@ -16,8 +17,11 @@ pub fn run_prune(base: &str, dry_run: bool) -> Result<()> {
     Ok(())
 }
 
-pub fn run_list(as_json: bool) -> Result<()> {
-    let all = list(&Quiet, Path::new("."))?;
+pub fn run_list(as_json: bool, with_owners: bool) -> Result<()> {
+    let mut all = list(&Quiet, Path::new("."))?;
+    if with_owners {
+        assign(&mut all, &live(&Quiet)?);
+    }
     if as_json {
         println!("{}", json(&all));
     } else {
