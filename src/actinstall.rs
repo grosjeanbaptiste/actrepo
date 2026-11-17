@@ -6,7 +6,7 @@ use std::io::Write;
 use std::path::Path;
 
 /// The main worktree of the repository `dir` belongs to: the first block of git's listing.
-fn main_worktree(probe: &impl Exec, dir: &Path) -> Result<String> {
+pub(crate) fn main_worktree(probe: &impl Exec, dir: &Path) -> Result<String> {
     let list = probe.run("git", &["worktree", "list", "--porcelain"], Some(dir))?;
     let first = list.split("\n\n").next().unwrap_or_default();
     first

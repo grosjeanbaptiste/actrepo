@@ -503,3 +503,55 @@ fn an_unverified_merge_does_not_install_anything() {
     assert!(r.is_err(), "{err}");
     assert!(spy.calls.borrow().is_empty(), "{:?}", spy.calls);
 }
+
+#[test]
+fn merging_from_the_copy_removes_the_copy_with_its_branch() {
+    let w = world();
+    let copy = head_held_elsewhere(&w);
+    let (r, out, err) = update_in(&w, &copy);
+    assert!(r.is_ok(), "{err}");
+    assert!(!copy.exists(), "the copy the merge ran from is still there");
+    assert!(!branch_exists(&w.work, "feature"));
+    assert!(out.contains("Removed this worktree"), "{out}");
+}
+
+#[test]
+fn the_copy_is_removed_after_actinstall_ran_in_it() {
+    let w = world();
+    let copy = head_held_elsewhere(&w);
+    let spy = Spy::new(false);
+    let (r, _, err) = update_with(&spy, &copy);
+    assert!(r.is_ok(), "{err}");
+    let main = ok(w.work.canonicalize());
+    assert_eq!(*spy.calls.borrow(), [format!("actinstall update --repo {}", main.display())]);
+}
+
+#[test]
+fn a_copy_with_local_changes_is_kept_with_a_warning() {
+    let w = world();
+    let copy = head_held_elsewhere(&w);
+    ok(fs::write(copy.join("scratch"), "wip"));
+    let (r, _, err) = update_in(&w, &copy);
+    assert!(r.is_err());
+    assert!(err.contains("has local changes, so it is kept"), "{err}");
+    assert!(copy.join("scratch").exists());
+}
+
+#[test]
+fn a_linked_worktree_that_was_not_on_the_head_is_not_removed() {
+    let w = world();
+    git(&w.work, &["checkout", "-q", "main"]);
+    let other = w.base.join("other-copy");
+    git(&w.work, &["worktree", "add", "-q", "-b", "other", &other.display().to_string(), "main"]);
+    let (r, _, err) = update_in(&w, &other);
+    assert!(r.is_ok(), "{err}");
+    assert!(other.exists(), "a worktree the PR did not come from was removed");
+}
+
+#[test]
+fn the_main_worktree_is_never_removed() {
+    let w = world();
+    let (r, _, err) = update_in(&w, &w.work); // main worktree, on the head
+    assert!(r.is_ok(), "{err}");
+    assert!(w.work.exists());
+}

@@ -109,9 +109,13 @@ fn path_with(bin: &Path) -> String {
 }
 
 fn repo(f: &Fx, args: &[&str], stdin: &str, env: &[(&str, &str)]) -> Output {
+    repo_in(f, &f.work, args, stdin, env)
+}
+
+fn repo_in(f: &Fx, dir: &Path, args: &[&str], stdin: &str, env: &[(&str, &str)]) -> Output {
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_repo"));
     cmd.args(args)
-        .current_dir(&f.work)
+        .current_dir(dir)
         .env("PATH", path_with(&f.bin))
         .env("GH_LOG", &f.log)
         .env("GH_HELPER", &f.helper)
@@ -340,4 +344,34 @@ fn a_missing_gh_fails_loudly_and_merges_nothing() {
         "{}",
         text(&o.stderr)
     );
+}
+
+#[test]
+fn merging_from_the_copy_removes_the_copy_it_ran_in() {
+    let f = fx();
+    git(&f.work, &["checkout", "-q", "main"]);
+    let copy = f.work.with_file_name("copy");
+    git(
+        &f.work,
+        &[
+            "worktree",
+            "add",
+            "-q",
+            &copy.display().to_string(),
+            "feature",
+        ],
+    );
+    let o = repo_in(&f, &copy, &["pr", "merge", "8", "--yes"], "", &[]);
+    assert!(o.status.success(), "{}", text(&o.stderr));
+    assert!(
+        !copy.exists(),
+        "the copy is still there: {}",
+        text(&o.stdout)
+    );
+    assert!(
+        text(&o.stdout).contains("Removed this worktree"),
+        "{}",
+        text(&o.stdout)
+    );
+    assert_eq!(git(&f.work, &["rev-parse", "--abbrev-ref", "HEAD"]), "main");
 }
