@@ -492,6 +492,7 @@ dependencies = [
  "actname",
  "anyhow",
  "clap",
+ "serde",
  "serde_json",
  "tempfile",
 ]

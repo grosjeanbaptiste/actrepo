@@ -149,3 +149,48 @@ fn the_library_exposes_the_registry() {
     let entries = ok(repo::registry::file::parse("a|/x\n"));
     assert_eq!(entries[0].name, "a");
 }
+
+/// `repo worktree list --owners` with `actsessions` replaced by a script printing `answer`.
+fn owners_run(f: &Fx, answer: &str, extra: &[&str]) -> Output {
+    let bin = f.alpha.with_file_name("bin");
+    ok(fs::create_dir_all(&bin));
+    let script = bin.join("actsessions");
+    ok(fs::write(
+        &script,
+        format!("#!/bin/sh\ncat <<'EOF'\n{answer}\nEOF\n"),
+    ));
+    ok(Command::new("chmod").arg("+x").arg(&script).status());
+    let path = format!(
+        "{}:{}",
+        bin.display(),
+        std::env::var("PATH").unwrap_or_default()
+    );
+    let mut args = vec!["worktree", "list", "--owners"];
+    args.extend_from_slice(extra);
+    Command::new(env!("CARGO_BIN_EXE_repo"))
+        .args(args)
+        .env("PATH", path)
+        .current_dir(&f.alpha)
+        .output()
+        .unwrap_or_else(|e| panic!("cannot run repo: {e}"))
+}
+
+#[test]
+fn worktree_list_owners_names_the_live_session_working_in_it() {
+    let f = fx();
+    let answer = format!(
+        r#"[{{"id":"s1","agent":"claude","status":"active","cwd":"{}"}},{{"id":"s2","agent":"claude","status":"idle","cwd":"{}"}}]"#,
+        f.alpha.join("src").display(),
+        f.alpha.display()
+    );
+    let v = stdout(&owners_run(&f, &answer, &["--json"]));
+    assert_eq!(v[0]["owners"], json!([{"id": "s1", "agent": "claude"}]));
+}
+
+#[test]
+fn worktree_list_owners_fails_loudly_when_actsessions_answers_garbage() {
+    let f = fx();
+    let o = owners_run(&f, "garbage", &[]);
+    assert!(!o.status.success());
+    assert!(String::from_utf8_lossy(&o.stderr).contains("actsessions list --json"));
+}
