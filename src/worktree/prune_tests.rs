@@ -244,3 +244,47 @@ fn a_merged_branch_is_deleted_even_when_the_local_head_does_not_contain_it() {
     assert_eq!(ok(r), 1, "{out}");
     assert!(!branch_exists(&w.work, "feat"), "{out}");
 }
+
+/// Real git; any other program (here `actinstall`) is recorded, never run.
+struct Spy(std::cell::RefCell<Vec<String>>);
+
+impl Exec for Spy {
+    fn run(&self, prog: &str, args: &[&str], cwd: Option<&Path>) -> Result<String> {
+        if prog == "git" {
+            return Process.run(prog, args, cwd);
+        }
+        self.0.borrow_mut().push(format!("{prog} {}", args.join(" ")));
+        Ok(String::new())
+    }
+}
+
+fn prune_command(w: &World, dry_run: bool) -> (Result<()>, Vec<String>) {
+    let spy = Spy(Default::default());
+    let (mut out, mut err) = (Vec::new(), Vec::new());
+    let r = crate::worktree::command::prune_and_refresh(&Quiet, &spy, &w.work, "main", dry_run, &mut out, &mut err);
+    (r, spy.0.into_inner())
+}
+
+#[test]
+fn a_pruned_worktree_asks_actinstall_to_update_the_repository() {
+    let w = world();
+    feature(&w, "feat", true);
+    merge_on_remote(&w, "feat");
+    let (r, calls) = prune_command(&w, false);
+    ok(r);
+    let main = ok(w.work.canonicalize());
+    assert_eq!(calls, [format!("actinstall update --repo {}", main.display())]);
+}
+
+#[test]
+fn nothing_pruned_or_a_dry_run_installs_nothing() {
+    let w = world();
+    let (r, calls) = prune_command(&w, false);
+    ok(r);
+    assert!(calls.is_empty());
+    feature(&w, "feat", true);
+    merge_on_remote(&w, "feat");
+    let (r, calls) = prune_command(&w, true);
+    ok(r);
+    assert!(calls.is_empty());
+}
