@@ -35,12 +35,12 @@ fn linked(probe: &impl Exec, dir: &Path, base: &str) -> Result<Vec<Linked>> {
     Ok(found)
 }
 
-/// Linked worktrees on no branch whose HEAD is `origin/<base>`: what a merge leaves behind in the copy
-/// it ran from. They hold no work of their own.
-fn detached_at_base(probe: &impl Exec, dir: &Path, base: &str) -> Result<Vec<PathBuf>> {
+/// Linked worktrees on no branch whose HEAD is contained in `origin/<base>`: what a merge leaves behind
+/// in the copy it ran from. They hold no work of their own.
+fn detached_in_base(probe: &impl Exec, dir: &Path, base: &str) -> Result<Vec<PathBuf>> {
     let list = probe.run("git", &["worktree", "list", "--porcelain"], Some(dir))?;
     let here = probe.run("git", &["rev-parse", "--show-toplevel"], Some(dir))?;
-    let tip = probe.run("git", &["rev-parse", &format!("origin/{base}")], Some(dir))?;
+    let remote = format!("origin/{base}");
     let mut found = Vec::new();
     for block in list.split("\n\n").skip(1) {
         let field = |key: &str| block.lines().find_map(|l| l.strip_prefix(key));
@@ -52,7 +52,15 @@ fn detached_at_base(probe: &impl Exec, dir: &Path, base: &str) -> Result<Vec<Pat
         let (Some(path), Some(head)) = (field("worktree "), field("HEAD ")) else {
             continue;
         };
-        if head == tip.trim() && Path::new(path) != Path::new(here.trim()) {
+        // an Err from merge-base --is-ancestor is its answer "not contained"
+        let contained = probe
+            .run(
+                "git",
+                &["merge-base", "--is-ancestor", head, &remote],
+                Some(dir),
+            )
+            .is_ok();
+        if contained && Path::new(path) != Path::new(here.trim()) {
             found.push(PathBuf::from(path));
         }
     }
@@ -105,20 +113,23 @@ pub fn prune(
             removed += 1;
         }
     }
-    for path in detached_at_base(probe, dir, base)? {
+    for path in detached_in_base(probe, dir, base)? {
         let p = path.display().to_string();
         if has_changes(probe, &path)? {
             writeln!(
                 out,
-                "kept {p}: detached at origin/{base} but the worktree has local changes"
+                "kept {p}: contained in origin/{base} but the worktree has local changes"
             )?;
         } else if dry_run {
-            writeln!(out, "would remove {p} (detached at origin/{base})")?;
+            writeln!(
+                out,
+                "would remove {p} (detached, contained in origin/{base})"
+            )?;
             removed += 1;
         } else {
             act.run("git", &["worktree", "remove", &p], Some(dir))
                 .with_context(|| format!("removing {p}"))?;
-            writeln!(out, "removed {p} (detached at origin/{base})")?;
+            writeln!(out, "removed {p} (detached, contained in origin/{base})")?;
             removed += 1;
         }
     }
