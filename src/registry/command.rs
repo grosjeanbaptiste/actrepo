@@ -1,5 +1,6 @@
 //! `repo list|scan|status`: the registry commands, wired to the real process and environment.
 use super::file::{find, list, path, read};
+use super::json;
 use super::{scan::scan, status};
 use crate::scaffold::native::Quiet;
 use anyhow::{Context, Result, bail};
@@ -9,8 +10,12 @@ fn registry() -> Result<PathBuf> {
     path(|k| std::env::var(k).ok())
 }
 
-pub fn run_list() -> Result<()> {
+pub fn run_list(as_json: bool) -> Result<()> {
     let entries = read(&registry()?)?;
+    if as_json {
+        println!("{}", json::list(&entries));
+        return Ok(());
+    }
     if entries.is_empty() {
         eprintln!("No projects registered yet. Run: repo scan");
     }
@@ -37,8 +42,11 @@ pub fn run_scan(roots: &[String]) -> Result<()> {
     Ok(())
 }
 
-pub fn run_status(name: Option<&str>) -> Result<()> {
+pub fn run_status(name: Option<&str>, as_json: bool) -> Result<()> {
     let entries = read(&registry()?)?;
+    if as_json {
+        return status_json(&entries, name);
+    }
     match name {
         None => {
             let mut warnings = Vec::new();
@@ -52,5 +60,24 @@ pub fn run_status(name: Option<&str>) -> Result<()> {
             print!("{}", status::one(&Quiet, name, &path)?);
         }
     }
+    Ok(())
+}
+
+fn status_json(entries: &[super::file::Entry], name: Option<&str>) -> Result<()> {
+    let value = match name {
+        None => {
+            let mut warnings = Vec::new();
+            let all = json::status_all(&Quiet, entries, &mut warnings);
+            warnings.iter().for_each(|w| eprintln!("warn: {w}"));
+            all
+        }
+        Some(name) => {
+            let Some(path) = find(entries, name) else {
+                bail!("Unknown project: {name}");
+            };
+            json::status_one(&Quiet, name, &path)?
+        }
+    };
+    println!("{value}");
     Ok(())
 }
