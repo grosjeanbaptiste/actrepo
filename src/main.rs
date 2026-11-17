@@ -204,6 +204,9 @@ enum WtCmd {
         /// Print a JSON array instead of text.
         #[arg(long)]
         json: bool,
+        /// Add the live agent sessions working in each worktree (runs `actsessions list --json`).
+        #[arg(long)]
+        owners: bool,
     },
     /// Remove each clean worktree whose pushed branch is contained in origin/BASE, and the branch.
     Prune {
@@ -273,7 +276,7 @@ fn main() -> Result<()> {
             }
         },
         Cmd::Worktree { sub } => match sub {
-            WtCmd::List { json } => worktree::command::run_list(json),
+            WtCmd::List { json, owners } => worktree::command::run_list(json, owners),
             WtCmd::Prune { base, dry_run } => worktree::command::run_prune(&base, dry_run),
         },
         Cmd::Workspace { sub } => match sub {

@@ -11,6 +11,7 @@ fn a_branch_a_detached_head_and_a_gone_folder_are_told_apart() {
         main,
         detached,
         prunable,
+        owners: None,
     };
     assert_eq!(
         parse(out),
@@ -31,4 +32,13 @@ fn nothing_listed_is_an_empty_list() {
 fn the_text_marks_detached_and_gone() {
     let all = parse("worktree /r\nbranch refs/heads/main\n\nworktree /d\ndetached\nprunable x\n");
     assert_eq!(text(&all), "/r  main\n/d  (detached)  (folder gone)\n");
+}
+
+#[test]
+fn owners_are_listed_under_their_worktree_and_in_json_only_when_known() {
+    let mut all = parse("worktree /r\nbranch refs/heads/main\n");
+    assert!(json(&all)[0].get("owners").is_none());
+    all[0].owners = Some(vec![Owner { id: "s1".into(), agent: "claude".into() }]);
+    assert_eq!(text(&all), "/r  main\n    owner: claude s1\n");
+    assert_eq!(json(&all)[0]["owners"], serde_json::json!([{"id": "s1", "agent": "claude"}]));
 }
