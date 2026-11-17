@@ -1,6 +1,7 @@
 //! After `gh pr merge`: bring the local branches up to date. The PR is merged
 //! by then, so every failing step is reported and the call fails, but none
 //! hides that the merge itself succeeded.
+use crate::actinstall::refresh;
 use crate::scaffold::setup::Exec;
 use crate::worktree::prune::prune;
 use anyhow::{Result, bail};
@@ -44,6 +45,7 @@ pub fn update(
         ok &= delete_head(probe, &git, dir, head, err)?;
         ok &= delete_remote_head(probe, &git, dir, head, err)?;
         ok &= sweep_merged(probe, act, dir, base, out, err)?;
+        ok &= refresh(probe, act, dir, err)?; // what landed on the base is what gets installed
     } else {
         ok = false;
     }

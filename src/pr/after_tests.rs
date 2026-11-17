@@ -83,9 +83,38 @@ fn world() -> World {
     }
 }
 
+/// Real git; any other program (here `actinstall`) is recorded, never run.
+struct Spy {
+    calls: std::cell::RefCell<Vec<String>>,
+    fail: bool,
+}
+
+impl Spy {
+    fn new(fail: bool) -> Self {
+        Spy { calls: Default::default(), fail }
+    }
+}
+
+impl Exec for Spy {
+    fn run(&self, prog: &str, args: &[&str], cwd: Option<&Path>) -> Result<String> {
+        if prog == "git" {
+            return Process.run(prog, args, cwd);
+        }
+        self.calls.borrow_mut().push(format!("{prog} {}", args.join(" ")));
+        if self.fail {
+            anyhow::bail!("{prog} exploded");
+        }
+        Ok(String::new())
+    }
+}
+
 fn update_in(_w: &World, dir: &Path) -> (Result<()>, String, String) {
+    update_with(&Spy::new(false), dir)
+}
+
+fn update_with(spy: &Spy, dir: &Path) -> (Result<()>, String, String) {
     let (mut out, mut err) = (Vec::new(), Vec::new());
-    let r = update(&Quiet, &Process, dir, "main", "feature", &mut out, &mut err);
+    let r = update(&Quiet, spy, dir, "main", "feature", &mut out, &mut err);
     (
         r,
         String::from_utf8_lossy(&out).into_owned(),
@@ -444,4 +473,33 @@ fn a_worktree_whose_folder_is_gone_does_not_hold_the_base() {
     assert!(r.is_ok(), "{err}");
     assert_eq!(git(&w.work, &["log", "-1", "--format=%s"]), "merge feature");
     assert!(!branch_exists(&w.work, "feature"));
+}
+
+#[test]
+fn a_verified_merge_asks_actinstall_to_update_the_main_worktree() {
+    let w = world();
+    let spy = Spy::new(false);
+    let (r, _, err) = update_with(&spy, &w.work);
+    assert!(r.is_ok(), "{err}");
+    let main = ok(w.work.canonicalize());
+    assert_eq!(*spy.calls.borrow(), [format!("actinstall update --repo {}", main.display())]);
+}
+
+#[test]
+fn a_failing_actinstall_is_a_warning_and_a_failed_update() {
+    let w = world();
+    let (r, _, err) = update_with(&Spy::new(true), &w.work);
+    assert!(r.is_err());
+    assert!(err.contains("warning: actinstall update failed for") && err.contains("actinstall exploded"), "{err}");
+}
+
+#[test]
+fn an_unverified_merge_does_not_install_anything() {
+    let w = world();
+    git(&w.work, &["checkout", "-q", "feature"]);
+    commit(&w.work, "unmerged");
+    let spy = Spy::new(false);
+    let (r, _, err) = update_with(&spy, &w.base.join("work"));
+    assert!(r.is_err(), "{err}");
+    assert!(spy.calls.borrow().is_empty(), "{:?}", spy.calls);
 }
