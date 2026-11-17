@@ -288,3 +288,31 @@ fn nothing_pruned_or_a_dry_run_installs_nothing() {
     ok(r);
     assert!(calls.is_empty());
 }
+
+fn detached_at(w: &World, name: &str, rev: &str) -> PathBuf {
+    let wt = w.base.join(name);
+    git(&w.work, &["worktree", "add", "-q", "--detach", &wt.display().to_string(), rev]);
+    wt
+}
+
+#[test]
+fn a_clean_worktree_detached_at_origin_base_holds_nothing_and_goes() {
+    let w = world();
+    let wt = detached_at(&w, "left-over", "origin/main");
+    let (r, out) = prune_in(&w, false);
+    assert_eq!(ok(r), 1, "{out}");
+    assert!(!wt.exists(), "{out}");
+}
+
+#[test]
+fn a_detached_worktree_elsewhere_or_with_changes_is_kept() {
+    let w = world();
+    let behind = detached_at(&w, "behind", "origin/main");
+    commit(&behind, "mine"); // detached, but no longer at origin/main
+    let dirty = detached_at(&w, "dirty", "origin/main");
+    ok(fs::write(dirty.join("scratch"), "wip"));
+    let (r, out) = prune_in(&w, false);
+    assert_eq!(ok(r), 0, "{out}");
+    assert!(behind.exists() && dirty.exists());
+    assert!(out.contains("kept") && out.contains("dirty"), "{out}");
+}
