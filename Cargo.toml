@@ -6,8 +6,8 @@ rust-version = "1.85"
 description = "Manage git repositories: names from actname, scaffolding and status from dotfiles, PRs through actautoma"
 
 [dependencies]
-actname = { git = "ssh://git@github.com/grosjeanbaptiste/Actname.git", rev = "d25d5d09d0e8f23413669b751729b0b98c95aa63" }
-actit = { git = "ssh://git@github.com/grosjeanbaptiste/Actit.git", rev = "516df332ab9171140bb08e60fa0a3d33d64e15a5" }
+actname = { git = "ssh://git@github.com/grosjeanbaptiste/Actname.git", rev = "dfc9f80b91b2e4df1c6bd3a077385df765cd43cf" }
+actit = { git = "ssh://git@github.com/grosjeanbaptiste/Actit.git", rev = "6f51ca283755f26aea074b5f6b95c6e477b10121" }
 actautoma = { git = "https://github.com/grosjeanbaptiste/actautoma", rev = "dde05e0d29ad9feb7bcd4e56d8a76a3aab1ff067" }
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }

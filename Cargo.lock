@@ -13,7 +13,7 @@ dependencies = [
 [[package]]
 name = "actit"
 version = "0.1.0"
-source = "git+ssh://git@github.com/grosjeanbaptiste/Actit.git?rev=516df332ab9171140bb08e60fa0a3d33d64e15a5#516df332ab9171140bb08e60fa0a3d33d64e15a5"
+source = "git+ssh://git@github.com/grosjeanbaptiste/Actit.git?rev=6f51ca283755f26aea074b5f6b95c6e477b10121#6f51ca283755f26aea074b5f6b95c6e477b10121"
 dependencies = [
  "actautoma",
  "serde",
@@ -25,7 +25,7 @@ dependencies = [
 [[package]]
 name = "actname"
 version = "0.1.0"
-source = "git+ssh://git@github.com/grosjeanbaptiste/Actname.git?rev=d25d5d09d0e8f23413669b751729b0b98c95aa63#d25d5d09d0e8f23413669b751729b0b98c95aa63"
+source = "git+ssh://git@github.com/grosjeanbaptiste/Actname.git?rev=dfc9f80b91b2e4df1c6bd3a077385df765cd43cf#dfc9f80b91b2e4df1c6bd3a077385df765cd43cf"
 
 [[package]]
 name = "adler2"

@@ -19,6 +19,9 @@ fn linked(probe: &impl Exec, dir: &Path, base: &str) -> Result<Vec<Linked>> {
     let mut found = Vec::new();
     for block in list.split("\n\n").skip(1) {
         let field = |key: &str| block.lines().find_map(|l| l.strip_prefix(key));
+        if block.lines().any(|l| l.starts_with("prunable")) {
+            continue; // its folder is gone: `git worktree prune` forgets it, nothing to remove
+        }
         let (Some(path), Some(branch)) = (field("worktree "), field("branch refs/heads/")) else {
             continue; // detached or bare: no branch to judge
         };
@@ -71,7 +74,8 @@ pub fn prune(
         } else {
             act.run("git", &["worktree", "remove", &p], Some(dir))
                 .with_context(|| format!("removing {p}"))?;
-            act.run("git", &["branch", "-d", &w.branch], Some(dir))
+            // -D: containment in origin/BASE was just checked; -d would compare with the local HEAD, which may be behind
+            act.run("git", &["branch", "-D", &w.branch], Some(dir))
                 .with_context(|| format!("deleting {}", w.branch))?;
             writeln!(out, "removed {p} and {}", w.branch)?;
             removed += 1;
