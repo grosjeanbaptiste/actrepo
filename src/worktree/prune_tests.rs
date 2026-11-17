@@ -296,7 +296,7 @@ fn detached_at(w: &World, name: &str, rev: &str) -> PathBuf {
 }
 
 #[test]
-fn a_clean_worktree_detached_at_origin_base_holds_nothing_and_goes() {
+fn a_clean_worktree_detached_in_origin_base_holds_nothing_and_goes() {
     let w = world();
     let wt = detached_at(&w, "left-over", "origin/main");
     let (r, out) = prune_in(&w, false);
@@ -305,7 +305,7 @@ fn a_clean_worktree_detached_at_origin_base_holds_nothing_and_goes() {
 }
 
 #[test]
-fn a_detached_worktree_elsewhere_or_with_changes_is_kept() {
+fn a_detached_worktree_with_its_own_commit_or_changes_is_kept() {
     let w = world();
     let behind = detached_at(&w, "behind", "origin/main");
     commit(&behind, "mine"); // detached, but no longer at origin/main
@@ -315,4 +315,16 @@ fn a_detached_worktree_elsewhere_or_with_changes_is_kept() {
     assert_eq!(ok(r), 0, "{out}");
     assert!(behind.exists() && dirty.exists());
     assert!(out.contains("kept") && out.contains("dirty"), "{out}");
+}
+
+#[test]
+fn a_worktree_detached_at_an_older_commit_of_origin_base_goes_too() {
+    let w = world();
+    feature(&w, "feat", true);
+    merge_on_remote(&w, "feat");
+    git(&w.work, &["fetch", "-q"]);
+    let old = detached_at(&w, "old", "main"); // the commit before the merge, contained in origin/main
+    let (r, out) = prune_in(&w, false);
+    assert!(ok(r) >= 1, "{out}");
+    assert!(!old.exists(), "{out}");
 }
