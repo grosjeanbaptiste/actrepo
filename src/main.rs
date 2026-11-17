@@ -9,6 +9,7 @@ mod fakes;
 mod install;
 mod license;
 mod naming;
+mod orchestrate;
 mod pipeline;
 mod pr;
 mod push;
@@ -23,7 +24,7 @@ mod worktree;
 
 use actautoma::{gh::Gh, process::ProcessRunner};
 use actit::forge_names::ForgeNames;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use naming::Query;
 use pipeline::{Dotfiles, NewOpts, Source};
@@ -216,6 +217,21 @@ enum Cmd {
         #[command(subcommand)]
         sub: WtCmd,
     },
+    /// Run actit in-process: `repo actit "<need>"`, `repo actit --name N [--owner O] [--contains]`.
+    Actit {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Run actname in-process: `repo actname generate --prefix act --domain "<words>"`.
+    Actname {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Run actautoma in-process: `repo actautoma rename-repo OWNER/OLD NEW [--dir D] [--dry-run]`.
+    Actautoma {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
     /// Any other command goes to `dotfiles project` (list, status, pr, doctor, …).
     #[command(external_subcommand)]
     Other(Vec<String>),
@@ -342,6 +358,19 @@ fn main() -> Result<()> {
             code => std::process::exit(code), // the project's own failure: its code, its diagnostics
         },
         Cmd::Doctor { path } => doctor::command::command(Path::new(&path)),
+        Cmd::Actit { args } => {
+            let env = |key: &str| std::env::var(key).ok();
+            match orchestrate::actit(&args, &env, &mut std::io::stdout().lock())? {
+                0 => Ok(()),
+                code => std::process::exit(code), // actit's verdict: its code
+            }
+        }
+        Cmd::Actname { args } => orchestrate::actname(&args, &mut std::io::stdout().lock()),
+        Cmd::Actautoma { args } => {
+            let env = |key: &str| std::env::var(key).ok();
+            let cwd = std::env::current_dir().context("no current folder")?;
+            orchestrate::actautoma(&args, &cwd, &env, &mut std::io::stdout().lock())
+        }
         Cmd::Other(args) => delegate::project(&args),
         Cmd::RenameBranch {
             path,
