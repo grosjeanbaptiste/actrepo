@@ -14,6 +14,7 @@ mod pr;
 mod push;
 mod registry;
 mod release;
+mod repo_rename;
 mod root;
 mod run;
 mod scaffold;
@@ -194,6 +195,19 @@ enum Cmd {
         #[command(subcommand)]
         sub: WsCmd,
     },
+    /// Rename this repository everywhere: GitHub, origin, folder, Cargo binary and references.
+    Rename {
+        new: String,
+        /// The local clone (default: the current folder).
+        #[arg(long)]
+        dir: Option<String>,
+        /// The platform already has the new name.
+        #[arg(long)]
+        local_only: bool,
+        /// List the rewrites; change nothing.
+        #[arg(long, short = 'n')]
+        dry_run: bool,
+    },
     /// Linked worktrees: remove the ones whose branch is merged.
     Worktree {
         #[command(subcommand)]
@@ -273,6 +287,12 @@ fn main() -> Result<()> {
                 pr::command::run_merge(&pr::merge::Opts { number, yes })
             }
         },
+        Cmd::Rename {
+            new,
+            dir,
+            local_only,
+            dry_run,
+        } => repo_rename::command::run_rename(&new, dir.as_deref(), local_only, dry_run),
         Cmd::Worktree { sub } => match sub {
             WtCmd::Prune { base, dry_run } => worktree::command::run_prune(&base, dry_run),
         },

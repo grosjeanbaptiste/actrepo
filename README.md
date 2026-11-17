@@ -37,6 +37,7 @@ repo rename-branch [PATH] [--from master] [--to main] [--dry-run] [--delete-old]
 repo push [--dir PATH] [--dry-run] [--yes]      # push every nested repo that is clean and ahead; asks first
 repo pr create [--base B] [--title T] [--body D]    # PR for the current branch; title/description asked on stdin if not given
 repo pr merge [N] [--yes]                           # merge commit, branch deleted, base fast-forwarded locally, then, only once the head is verified contained in origin/BASE: the clean worktree holding it, the local branch and a leftover remote branch removed (a worktree with changes is kept, with a warning)
+repo rename NEW [--dir PATH] [--local-only] [-n]       # rename everywhere through actautoma: GitHub, origin, folder (sibling NEW), Cargo binary, references in the state repo, dotfiles, ~/claude-memory and the Claude project folders
 repo worktree prune [--base main] [-n]               # remove each clean worktree whose pushed branch is contained in origin/BASE, and the branch; `repo pr merge` runs it
 repo workspace list | status | push [-n]            # folders of the nearest *.code-workspace ($DOTFILES_WORKSPACE_FILE overrides)
 repo workspace add NAME [--clone URL | --init TYPE] # adopt ./NAME, or clone / scaffold it first
