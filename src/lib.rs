@@ -15,6 +15,7 @@ pub mod pr;
 pub mod push;
 pub mod registry;
 pub mod release;
+pub mod rename;
 pub mod root;
 pub mod run;
 pub mod scaffold;

@@ -8,7 +8,7 @@ use naming::Query;
 use pipeline::{Dotfiles, NewOpts, Source};
 use repo::{
     audit, branch, delegate, deploy, doctor, install, license, naming, pipeline, pr, push,
-    registry, release, root, run, scaffold, workspace, worktree,
+    registry, release, rename, root, run, scaffold, workspace, worktree,
 };
 use scaffold::apply::Mode;
 use scaffold::command;
@@ -90,6 +90,25 @@ enum Cmd {
         /// Also delete the old branch on origin (irreversible).
         #[arg(long)]
         delete_old: bool,
+    },
+    /// Rename a repository everywhere: platform, origin, folder, written references, registry.
+    Rename {
+        /// `OWNER/OLD`.
+        slug: String,
+        /// The new repository name.
+        new: String,
+        /// The local folder (default: the registry's path for OLD).
+        #[arg(long)]
+        dir: Option<String>,
+        /// Move the renamed folder under this parent (default: next to the old one).
+        #[arg(long)]
+        into: Option<String>,
+        /// The platform already carries the new name: skip the platform rename.
+        #[arg(long)]
+        local_only: bool,
+        /// Print the renames; change nothing.
+        #[arg(long)]
+        dry_run: bool,
     },
     /// List the registered projects (name and path).
     List {
@@ -336,6 +355,21 @@ fn main() -> Result<()> {
             dry_run,
             delete_old,
         } => branch::command::run(&path, &from, &to, dry_run, delete_old),
+        Cmd::Rename {
+            slug,
+            new,
+            dir,
+            into,
+            local_only,
+            dry_run,
+        } => rename::command::run(
+            &slug,
+            &new,
+            dir.as_deref(),
+            into.as_deref(),
+            local_only,
+            dry_run,
+        ),
         Cmd::List { json } => registry::command::run_list(json),
         Cmd::Scan { roots } => registry::command::run_scan(&roots),
         Cmd::Status { name, json } => registry::command::run_status(name.as_deref(), json),
