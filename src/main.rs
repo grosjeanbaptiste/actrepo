@@ -7,7 +7,7 @@ use clap::{Parser, Subcommand};
 use naming::Query;
 use pipeline::{Dotfiles, NewOpts, Source};
 use repo::{
-    audit, branch, delegate, deploy, doctor, install, license, naming, pipeline, pr, push,
+    audit, branch, delegate, deploy, device, doctor, install, license, naming, pipeline, pr, push,
     registry, release, rename, root, run, scaffold, workspace, worktree,
 };
 use scaffold::apply::Mode;
@@ -211,7 +211,18 @@ enum Cmd {
         #[command(subcommand)]
         sub: WtCmd,
     },
-    /// Any other command goes to `dotfiles project` (list, status, pr, doctor, …).
+    /// Candidates for the shell completion (used by `repo completions`).
+    #[command(
+        name = "__complete",
+        hide = true,
+        trailing_var_arg = true,
+        allow_hyphen_values = true
+    )]
+    Complete { words: Vec<String> },
+    /// Print the zsh or bash completion script: `eval "$(repo completions zsh)"`.
+    Completions { shell: String },
+    /// `repo <dir> run|install [DEVICE] [--release]` runs or installs the app of <dir> on a device;
+    /// any other command goes to `dotfiles project` (list, status, pr, doctor, …).
     #[command(external_subcommand)]
     Other(Vec<String>),
 }
@@ -347,6 +358,14 @@ fn main() -> Result<()> {
             code => std::process::exit(code), // the project's own failure: its code, its diagnostics
         },
         Cmd::Doctor { path } => doctor::command::command(Path::new(&path)),
+        Cmd::Complete { words } => device::command::complete(&words),
+        Cmd::Completions { shell } => {
+            print!("{}", device::completions::script(&shell)?);
+            Ok(())
+        }
+        Cmd::Other(args) if device::request::is_device_request(&args) => {
+            device::command::command(&args)
+        }
         Cmd::Other(args) => delegate::project(&args),
         Cmd::RenameBranch {
             path,
