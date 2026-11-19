@@ -445,6 +445,7 @@ fn main() -> Result<()> {
                 root: root::expand(&root, std::env::var("HOME").ok())?,
                 no_push,
                 dry_run,
+                registry: Some(registry::file::path(|k| std::env::var(k).ok())?),
             };
             let names = ForgeNames::new(Gh::new(ProcessRunner));
             let name = if via_dotfiles {

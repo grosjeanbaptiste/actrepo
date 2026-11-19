@@ -2,7 +2,7 @@ use super::*;
 use crate::fakes::{Recorder, Registry};
 
 fn opts(source: Source, root: &Path) -> NewOpts {
-    NewOpts { kind: "package/rust".into(), source, root: root.to_path_buf(), no_push: true, dry_run: false }
+    NewOpts { kind: "package/rust".into(), source, root: root.to_path_buf(), no_push: true, dry_run: false, registry: None }
 }
 
 fn named(name: &str) -> Source {
@@ -214,4 +214,47 @@ fn a_file_with_the_name_counts_as_taken() {
     assert!(std::fs::write(dir.path().join("ifdck"), b"x").is_ok());
     assert!(run(&opts(named("ifdck"), dir.path()), &Registry::free(), &scaffold).is_err());
     assert!(scaffold.calls.borrow().is_empty());
+}
+
+fn registry_file(text: &str) -> (tempfile::TempDir, PathBuf) {
+    let dir = root();
+    let file = dir.path().join("projects.txt");
+    std::fs::write(&file, text).unwrap_or_else(|e| panic!("{e}"));
+    (dir, file)
+}
+
+#[test]
+fn a_created_project_is_registered_at_its_folder() {
+    let (dir, scaffold) = (root(), Recorder::default());
+    let (_r, file) = registry_file("a|/x/a\n");
+    let o = NewOpts { registry: Some(file.clone()), ..opts(named("ifdck"), dir.path()) };
+    assert!(run(&o, &Registry::free(), &scaffold).is_ok());
+    let want = format!("a|/x/a\nifdck|{}\n", dir.path().join("ifdck").display());
+    assert_eq!(std::fs::read_to_string(&file).unwrap_or_default(), want);
+}
+
+#[test]
+fn a_dry_run_registers_nothing() {
+    let (dir, scaffold) = (root(), Recorder::default());
+    let (_r, file) = registry_file("a|/x/a\n");
+    let o = NewOpts { registry: Some(file.clone()), dry_run: true, ..opts(named("ifdck"), dir.path()) };
+    assert!(run(&o, &Registry::free(), &scaffold).is_ok());
+    assert_eq!(std::fs::read_to_string(&file).unwrap_or_default(), "a|/x/a\n");
+}
+
+#[test]
+fn a_failed_scaffold_registers_nothing() {
+    let dir = root();
+    let (_r, file) = registry_file("");
+    let o = NewOpts { registry: Some(file.clone()), ..opts(named("ifdck"), dir.path()) };
+    assert!(run(&o, &Registry::free(), &Recorder { fail: true, ..Recorder::default() }).is_err());
+    assert_eq!(std::fs::read_to_string(&file).unwrap_or_default(), "");
+}
+
+#[test]
+fn a_registry_that_cannot_take_the_row_fails_loudly_after_the_scaffold() {
+    let (dir, scaffold) = (root(), Recorder::default());
+    let o = NewOpts { registry: Some(dir.path().join("nope/projects.txt")), ..opts(named("ifdck"), dir.path()) };
+    let err = run(&o, &Registry::free(), &scaffold).err().map(|e| format!("{e:#}")).unwrap_or_default();
+    assert!(err.contains("registry") && err.contains("ifdck"), "{err}");
 }
