@@ -2,5 +2,6 @@
 pub mod command;
 pub mod discover;
 pub mod file;
+pub mod json;
 pub mod scan;
 pub mod status;

@@ -56,6 +56,7 @@ pub fn run(
     slug: &str,
     new: &str,
     dir: Option<&str>,
+    into: Option<&str>,
     local_only: bool,
     dry_run: bool,
 ) -> Result<()> {
@@ -67,6 +68,7 @@ pub fn run(
         new,
         dir: dir.map(Path::new),
         local_only,
+        into: into.map(Path::new),
     };
     let planned = build(&req, &entries, &machine, &|p| p.is_dir())?;
     planned.warnings.iter().for_each(|w| eprintln!("warn: {w}"));

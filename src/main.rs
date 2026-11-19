@@ -1,27 +1,4 @@
 //! repo — name with actname, scaffold/manage with `dotfiles project`, PRs through actautoma.
-mod audit;
-mod branch;
-mod delegate;
-mod deploy;
-mod doctor;
-#[cfg(test)]
-mod fakes;
-mod install;
-mod license;
-mod naming;
-mod need;
-mod orchestrate;
-mod pipeline;
-mod pr;
-mod push;
-mod registry;
-mod release;
-mod rename;
-mod root;
-mod run;
-mod scaffold;
-mod workspace;
-mod worktree;
 
 use actautoma::{gh::Gh, process::ProcessRunner};
 use actit::forge_names::ForgeNames;
@@ -29,6 +6,10 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use naming::Query;
 use pipeline::{Dotfiles, NewOpts, Source};
+use repo::{
+    audit, branch, delegate, deploy, device, doctor, install, license, naming, need, orchestrate,
+    pipeline, pr, push, registry, release, rename, root, run, scaffold, workspace, worktree,
+};
 use scaffold::apply::Mode;
 use scaffold::command;
 use scaffold::native::{Native, Process, Quiet};
@@ -125,6 +106,9 @@ enum Cmd {
         /// The local folder (default: the registry's path for OLD).
         #[arg(long)]
         dir: Option<String>,
+        /// Move the renamed folder under this parent (default: next to the old one).
+        #[arg(long)]
+        into: Option<String>,
         /// The platform already carries the new name: skip the platform rename.
         #[arg(long)]
         local_only: bool,
@@ -133,11 +117,20 @@ enum Cmd {
         dry_run: bool,
     },
     /// List the registered projects (name and path).
-    List,
+    List {
+        /// Print a JSON array instead of the text list.
+        #[arg(long)]
+        json: bool,
+    },
     /// Find git repositories (default root: $HOME) and refresh the registry.
     Scan { roots: Vec<String> },
     /// Branch, ahead/behind, dirty files and remote for one project, or a table of all.
-    Status { name: Option<String> },
+    Status {
+        name: Option<String>,
+        /// Print JSON (an object for NAME, else an array) instead of text.
+        #[arg(long)]
+        json: bool,
+    },
     /// Push a repository and every repository nested under it (clean tree, ahead of its upstream).
     Push {
         /// Root to scan.
@@ -239,13 +232,33 @@ enum Cmd {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
-    /// Any other command goes to `dotfiles project` (list, status, pr, doctor, …).
+    /// Candidates for the shell completion (used by `repo completions`).
+    #[command(
+        name = "__complete",
+        hide = true,
+        trailing_var_arg = true,
+        allow_hyphen_values = true
+    )]
+    Complete { words: Vec<String> },
+    /// Print the zsh or bash completion script: `eval "$(repo completions zsh)"`.
+    Completions { shell: String },
+    /// `repo <dir> run|install [DEVICE] [--release]` runs or installs the app of <dir> on a device;
+    /// any other command goes to `dotfiles project` (list, status, pr, doctor, …).
     #[command(external_subcommand)]
     Other(Vec<String>),
 }
 
 #[derive(Subcommand)]
 enum WtCmd {
+    /// Worktrees of the repository in the current folder.
+    List {
+        /// Print a JSON array instead of text.
+        #[arg(long)]
+        json: bool,
+        /// Add the live agent sessions working in each worktree (runs `actsessions list --json`).
+        #[arg(long)]
+        owners: bool,
+    },
     /// Remove each clean worktree whose pushed branch is contained in origin/BASE, and the branch.
     Prune {
         #[arg(long, default_value = "main")]
@@ -314,6 +327,7 @@ fn main() -> Result<()> {
             }
         },
         Cmd::Worktree { sub } => match sub {
+            WtCmd::List { json, owners } => worktree::command::run_list(json, owners),
             WtCmd::Prune { base, dry_run } => worktree::command::run_prune(&base, dry_run),
         },
         Cmd::Workspace { sub } => match sub {
@@ -378,6 +392,14 @@ fn main() -> Result<()> {
             let cwd = std::env::current_dir().context("no current folder")?;
             orchestrate::actautoma(&args, &cwd, &env, &mut std::io::stdout().lock())
         }
+        Cmd::Complete { words } => device::command::complete(&words),
+        Cmd::Completions { shell } => {
+            print!("{}", device::completions::script(&shell)?);
+            Ok(())
+        }
+        Cmd::Other(args) if device::request::is_device_request(&args) => {
+            device::command::command(&args)
+        }
         Cmd::Other(args) => delegate::project(&args),
         Cmd::RenameBranch {
             path,
@@ -390,12 +412,20 @@ fn main() -> Result<()> {
             slug,
             new,
             dir,
+            into,
             local_only,
             dry_run,
-        } => rename::command::run(&slug, &new, dir.as_deref(), local_only, dry_run),
-        Cmd::List => registry::command::run_list(),
+        } => rename::command::run(
+            &slug,
+            &new,
+            dir.as_deref(),
+            into.as_deref(),
+            local_only,
+            dry_run,
+        ),
+        Cmd::List { json } => registry::command::run_list(json),
         Cmd::Scan { roots } => registry::command::run_scan(&roots),
-        Cmd::Status { name } => registry::command::run_status(name.as_deref()),
+        Cmd::Status { name, json } => registry::command::run_status(name.as_deref(), json),
         Cmd::Push { dir, dry_run, yes } => {
             let opts = push::Opts {
                 dir: dir.into(),
@@ -473,6 +503,7 @@ fn main() -> Result<()> {
                 root: root::expand(&root, std::env::var("HOME").ok())?,
                 no_push,
                 dry_run,
+                registry: Some(registry::file::path(|k| std::env::var(k).ok())?),
             };
             let names = ForgeNames::new(Gh::new(ProcessRunner));
             let name = if via_dotfiles {

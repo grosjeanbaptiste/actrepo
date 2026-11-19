@@ -33,15 +33,41 @@ pub fn project(entries: &[Entry], name: &str, probe: &dyn Exec) -> Result<PathBu
             root.display()
         );
     }
-    let status = git(&["--no-optional-locks", "status", "--porcelain"])
-        .with_context(|| format!("cannot read Git status for {}", root.display()))?;
-    if !status.trim().is_empty() {
+    // every untracked file on its own line, so a stray one is never hidden inside a folder entry
+    let status = git(&[
+        "--no-optional-locks",
+        "status",
+        "--porcelain",
+        "--untracked-files=all",
+    ])
+    .with_context(|| format!("cannot read Git status for {}", root.display()))?;
+    let listing = git(&["worktree", "list", "--porcelain"])
+        .with_context(|| format!("cannot list the worktrees of {}", root.display()))?;
+    if has_changes(&status, &listing, &root) {
         bail!("project has uncommitted changes: {}", root.display());
     }
     probe.run("cargo", &["--version"], None).map_err(|_| {
         anyhow::anyhow!("cargo is unavailable; install Rust through dotfiles first")
     })?;
     Ok(root)
+}
+
+/// True when `status` holds a real change: a linked worktree kept inside the project
+/// (`.worktrees/x`) shows as an untracked folder, and is not one.
+fn has_changes(status: &str, listing: &str, root: &Path) -> bool {
+    let worktrees: Vec<PathBuf> = listing
+        .lines()
+        .filter_map(|l| l.strip_prefix("worktree "))
+        .skip(1)
+        .map(PathBuf::from)
+        .collect();
+    status
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .any(|l| match l.strip_prefix("?? ") {
+            Some(path) => !worktrees.contains(&root.join(path.trim_end_matches('/'))),
+            None => true,
+        })
 }
 
 #[cfg(test)]

@@ -5,7 +5,15 @@ version = 4
 [[package]]
 name = "actautoma"
 version = "0.1.0"
-source = "git+https://github.com/grosjeanbaptiste/actautoma?rev=dde05e0d29ad9feb7bcd4e56d8a76a3aab1ff067#dde05e0d29ad9feb7bcd4e56d8a76a3aab1ff067"
+source = "git+https://github.com/grosjeanbaptiste/actautoma?rev=3965fc3840298ee5d5b403c502474c2ff243c966#3965fc3840298ee5d5b403c502474c2ff243c966"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
+name = "actdevice"
+version = "0.1.0"
+source = "git+ssh://git@github.com/grosjeanbaptiste/actdevice.git?rev=d5a6da90b2c817809dc1c19a1e38f4a464b03d47#d5a6da90b2c817809dc1c19a1e38f4a464b03d47"
 dependencies = [
  "serde_json",
 ]
@@ -13,7 +21,7 @@ dependencies = [
 [[package]]
 name = "actit"
 version = "0.1.0"
-source = "git+ssh://git@github.com/grosjeanbaptiste/Actit.git?rev=5030555ba763739d156c3932c241d45b4eaa28b1#5030555ba763739d156c3932c241d45b4eaa28b1"
+source = "git+ssh://git@github.com/grosjeanbaptiste/Actit.git?rev=00215afa7e46f951f63366f6a15e25557be8ee95#00215afa7e46f951f63366f6a15e25557be8ee95"
 dependencies = [
  "actautoma",
  "serde",
@@ -491,10 +499,12 @@ name = "repo"
 version = "0.1.0"
 dependencies = [
  "actautoma",
+ "actdevice",
  "actit",
  "actname",
  "anyhow",
  "clap",
+ "serde",
  "serde_json",
  "tempfile",
 ]

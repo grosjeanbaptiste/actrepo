@@ -77,6 +77,19 @@ fn fx() -> Fx {
     let gh = bin.join("gh");
     ok(fs::write(&gh, GH));
     ok(fs::set_permissions(&gh, fs::Permissions::from_mode(0o755)));
+    // a merge asks `actinstall` to update the installed binaries: a recorder, never the real one
+    let actinstall = bin.join("actinstall");
+    ok(fs::write(
+        &actinstall,
+        format!(
+            "#!/bin/sh\necho \"$@\" >> {}/actinstall.log\n",
+            base.display()
+        ),
+    ));
+    ok(fs::set_permissions(
+        &actinstall,
+        fs::Permissions::from_mode(0o755),
+    ));
     let log = base.join("gh.log");
     Fx {
         _d: d,
@@ -96,9 +109,13 @@ fn path_with(bin: &Path) -> String {
 }
 
 fn repo(f: &Fx, args: &[&str], stdin: &str, env: &[(&str, &str)]) -> Output {
+    repo_in(f, &f.work, args, stdin, env)
+}
+
+fn repo_in(f: &Fx, dir: &Path, args: &[&str], stdin: &str, env: &[(&str, &str)]) -> Output {
     let mut cmd = Command::new(env!("CARGO_BIN_EXE_repo"));
     cmd.args(args)
-        .current_dir(&f.work)
+        .current_dir(dir)
         .env("PATH", path_with(&f.bin))
         .env("GH_LOG", &f.log)
         .env("GH_HELPER", &f.helper)
@@ -119,6 +136,10 @@ fn text(b: &[u8]) -> String {
     String::from_utf8_lossy(b).into_owned()
 }
 
+fn actinstall_log(f: &Fx) -> String {
+    fs::read_to_string(f.bin.with_file_name("actinstall.log")).unwrap_or_default()
+}
+
 fn gh_log(f: &Fx) -> String {
     fs::read_to_string(&f.log).unwrap_or_default()
 }
@@ -132,6 +153,11 @@ fn merge_with_yes_merges_updates_main_and_deletes_the_branch() {
         gh_log(&f).contains("pr merge 8 --merge --delete-branch"),
         "{}",
         gh_log(&f)
+    );
+    assert!(
+        actinstall_log(&f).starts_with("update --repo "),
+        "actinstall was not asked: {:?}",
+        actinstall_log(&f)
     );
     assert_eq!(git(&f.work, &["rev-parse", "--abbrev-ref", "HEAD"]), "main");
     assert_eq!(git(&f.work, &["log", "-1", "--format=%s"]), "merge feature");
@@ -318,4 +344,34 @@ fn a_missing_gh_fails_loudly_and_merges_nothing() {
         "{}",
         text(&o.stderr)
     );
+}
+
+#[test]
+fn merging_from_the_copy_removes_the_copy_it_ran_in() {
+    let f = fx();
+    git(&f.work, &["checkout", "-q", "main"]);
+    let copy = f.work.with_file_name("copy");
+    git(
+        &f.work,
+        &[
+            "worktree",
+            "add",
+            "-q",
+            &copy.display().to_string(),
+            "feature",
+        ],
+    );
+    let o = repo_in(&f, &copy, &["pr", "merge", "8", "--yes"], "", &[]);
+    assert!(o.status.success(), "{}", text(&o.stderr));
+    assert!(
+        !copy.exists(),
+        "the copy is still there: {}",
+        text(&o.stdout)
+    );
+    assert!(
+        text(&o.stdout).contains("Removed this worktree"),
+        "{}",
+        text(&o.stdout)
+    );
+    assert_eq!(git(&f.work, &["rev-parse", "--abbrev-ref", "HEAD"]), "main");
 }

@@ -83,9 +83,38 @@ fn world() -> World {
     }
 }
 
+/// Real git; any other program (here `actinstall`) is recorded, never run.
+struct Spy {
+    calls: std::cell::RefCell<Vec<String>>,
+    fail: bool,
+}
+
+impl Spy {
+    fn new(fail: bool) -> Self {
+        Spy { calls: Default::default(), fail }
+    }
+}
+
+impl Exec for Spy {
+    fn run(&self, prog: &str, args: &[&str], cwd: Option<&Path>) -> Result<String> {
+        if prog == "git" {
+            return Process.run(prog, args, cwd);
+        }
+        self.calls.borrow_mut().push(format!("{prog} {}", args.join(" ")));
+        if self.fail {
+            anyhow::bail!("{prog} exploded");
+        }
+        Ok(String::new())
+    }
+}
+
 fn update_in(_w: &World, dir: &Path) -> (Result<()>, String, String) {
+    update_with(&Spy::new(false), dir)
+}
+
+fn update_with(spy: &Spy, dir: &Path) -> (Result<()>, String, String) {
     let (mut out, mut err) = (Vec::new(), Vec::new());
-    let r = update(&Quiet, &Process, dir, "main", "feature", &mut out, &mut err);
+    let r = update(&Quiet, spy, dir, "main", "feature", &mut out, &mut err);
     (
         r,
         String::from_utf8_lossy(&out).into_owned(),
@@ -444,4 +473,85 @@ fn a_worktree_whose_folder_is_gone_does_not_hold_the_base() {
     assert!(r.is_ok(), "{err}");
     assert_eq!(git(&w.work, &["log", "-1", "--format=%s"]), "merge feature");
     assert!(!branch_exists(&w.work, "feature"));
+}
+
+#[test]
+fn a_verified_merge_asks_actinstall_to_update_the_main_worktree() {
+    let w = world();
+    let spy = Spy::new(false);
+    let (r, _, err) = update_with(&spy, &w.work);
+    assert!(r.is_ok(), "{err}");
+    let main = ok(w.work.canonicalize());
+    assert_eq!(*spy.calls.borrow(), [format!("actinstall update --repo {}", main.display())]);
+}
+
+#[test]
+fn a_failing_actinstall_is_a_warning_and_a_failed_update() {
+    let w = world();
+    let (r, _, err) = update_with(&Spy::new(true), &w.work);
+    assert!(r.is_err());
+    assert!(err.contains("warning: actinstall update failed for") && err.contains("actinstall exploded"), "{err}");
+}
+
+#[test]
+fn an_unverified_merge_does_not_install_anything() {
+    let w = world();
+    git(&w.work, &["checkout", "-q", "feature"]);
+    commit(&w.work, "unmerged");
+    let spy = Spy::new(false);
+    let (r, _, err) = update_with(&spy, &w.base.join("work"));
+    assert!(r.is_err(), "{err}");
+    assert!(spy.calls.borrow().is_empty(), "{:?}", spy.calls);
+}
+
+#[test]
+fn merging_from_the_copy_removes_the_copy_with_its_branch() {
+    let w = world();
+    let copy = head_held_elsewhere(&w);
+    let (r, out, err) = update_in(&w, &copy);
+    assert!(r.is_ok(), "{err}");
+    assert!(!copy.exists(), "the copy the merge ran from is still there");
+    assert!(!branch_exists(&w.work, "feature"));
+    assert!(out.contains("Removed this worktree"), "{out}");
+}
+
+#[test]
+fn the_copy_is_removed_after_actinstall_ran_in_it() {
+    let w = world();
+    let copy = head_held_elsewhere(&w);
+    let spy = Spy::new(false);
+    let (r, _, err) = update_with(&spy, &copy);
+    assert!(r.is_ok(), "{err}");
+    let main = ok(w.work.canonicalize());
+    assert_eq!(*spy.calls.borrow(), [format!("actinstall update --repo {}", main.display())]);
+}
+
+#[test]
+fn a_copy_with_local_changes_is_kept_with_a_warning() {
+    let w = world();
+    let copy = head_held_elsewhere(&w);
+    ok(fs::write(copy.join("scratch"), "wip"));
+    let (r, _, err) = update_in(&w, &copy);
+    assert!(r.is_err());
+    assert!(err.contains("has local changes, so it is kept"), "{err}");
+    assert!(copy.join("scratch").exists());
+}
+
+#[test]
+fn a_linked_worktree_that_was_not_on_the_head_is_not_removed() {
+    let w = world();
+    git(&w.work, &["checkout", "-q", "main"]);
+    let other = w.base.join("other-copy");
+    git(&w.work, &["worktree", "add", "-q", "-b", "other", &other.display().to_string(), "main"]);
+    let (r, _, err) = update_in(&w, &other);
+    assert!(r.is_ok(), "{err}");
+    assert!(other.exists(), "a worktree the PR did not come from was removed");
+}
+
+#[test]
+fn the_main_worktree_is_never_removed() {
+    let w = world();
+    let (r, _, err) = update_in(&w, &w.work); // main worktree, on the head
+    assert!(r.is_ok(), "{err}");
+    assert!(w.work.exists());
 }

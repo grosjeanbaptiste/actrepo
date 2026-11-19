@@ -1,6 +1,8 @@
 //! After `gh pr merge`: bring the local branches up to date. The PR is merged
 //! by then, so every failing step is reported and the call fails, but none
 //! hides that the merge itself succeeded.
+use super::own;
+use crate::actinstall::refresh;
 use crate::scaffold::setup::Exec;
 use crate::worktree::prune::prune;
 use anyhow::{Result, bail};
@@ -17,6 +19,7 @@ pub fn update(
     out: &mut impl Write,
     err: &mut impl Write,
 ) -> Result<()> {
+    let own_copy = own::is_own_copy(probe, dir, head)?; // before the update detaches or moves this checkout
     writeln!(out, "\nUpdating local branches...")?;
     let git = |args: &[&str]| act.run("git", args, Some(dir));
     if git(&["fetch", "-p"]).is_err() {
@@ -44,6 +47,10 @@ pub fn update(
         ok &= delete_head(probe, &git, dir, head, err)?;
         ok &= delete_remote_head(probe, &git, dir, head, err)?;
         ok &= sweep_merged(probe, act, dir, base, out, err)?;
+        ok &= refresh(probe, act, dir, err)?; // what landed on the base is what gets installed
+        if own_copy {
+            ok &= own::remove(probe, act, dir, base, out, err)?; // last: nothing runs in `dir` after it is gone
+        }
     } else {
         ok = false;
     }
