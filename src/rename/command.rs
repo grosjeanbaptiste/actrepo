@@ -1,7 +1,8 @@
 //! `repo rename`, wired to the real machine and, through actautoma, the hosting platform.
 use super::entry::renamed;
 use super::plan::{Machine, Request, build};
-use crate::registry::file::{read, state_root};
+use super::slug::qualify;
+use crate::registry::file::{Entry, read, state_root};
 use crate::registry::scan::write_atomically;
 use actautoma::rename::{Outcome, Plan, check, execute};
 use actautoma::{gh::Gh, process::ProcessRunner};
@@ -52,6 +53,23 @@ fn report(plan: &Plan, out: &Outcome) {
         .for_each(|p| println!("renamed {}", p.display()));
 }
 
+/// `origin` of the git checkout in `dir`.
+fn origin_url(dir: &Path) -> Result<String> {
+    let out = std::process::Command::new("git")
+        .args(["-C"])
+        .arg(dir)
+        .args(["remote", "get-url", "origin"])
+        .output()
+        .context("cannot start git")?;
+    anyhow::ensure!(
+        out.status.success(),
+        "git remote get-url origin failed in {}: {}",
+        dir.display(),
+        String::from_utf8_lossy(&out.stderr).trim()
+    );
+    Ok(String::from_utf8_lossy(&out.stdout).trim().to_string())
+}
+
 pub fn run(
     slug: &str,
     new: &str,
@@ -63,8 +81,16 @@ pub fn run(
     let machine = machine()?;
     let file = machine.state.join("projects.txt");
     let entries = read(&file)?;
+    let mut known = entries.clone();
+    if let Some(dir) = dir {
+        known.push(Entry {
+            name: slug.into(),
+            path: PathBuf::from(dir),
+        }); // --dir names the folder of a bare OLD too
+    }
+    let slug = qualify(slug, &known, &|dir| origin_url(dir))?;
     let req = Request {
-        slug,
+        slug: &slug,
         new,
         dir: dir.map(Path::new),
         local_only,

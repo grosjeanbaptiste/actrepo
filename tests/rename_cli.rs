@@ -124,3 +124,27 @@ fn an_existing_target_folder_is_refused_before_any_change() {
         "git@github.com:me/old.git"
     );
 }
+
+#[test]
+fn a_bare_name_takes_its_owner_from_the_origin_of_the_registered_folder() {
+    let w = World::new();
+    let o = w.repo(&["rename", "old", "new", "--dry-run"]);
+    assert!(o.status.success(), "{}", text(&o.stderr));
+    assert!(
+        text(&o.stdout).contains("me/old -> me/new"),
+        "{}",
+        text(&o.stdout)
+    );
+}
+
+#[test]
+fn a_bare_unregistered_name_is_refused_naming_it() {
+    let w = World::new();
+    let o = w.repo(&["rename", "ghost", "new", "--dry-run"]);
+    assert!(!o.status.success());
+    assert!(
+        text(&o.stderr).contains("ghost is not registered"),
+        "{}",
+        text(&o.stderr)
+    );
+}
