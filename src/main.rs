@@ -99,7 +99,7 @@ enum Cmd {
     },
     /// Rename a repository everywhere: platform, origin, folder, written references, registry.
     Rename {
-        /// `OWNER/OLD`.
+        /// `OWNER/OLD`, or just `OLD` when it is registered (the owner is read from its origin).
         slug: String,
         /// The new repository name.
         new: String,
