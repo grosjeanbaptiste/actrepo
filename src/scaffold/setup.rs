@@ -10,6 +10,18 @@ use std::path::{Path, PathBuf};
 pub trait Exec {
     /// Runs `prog args` (in `cwd` when given); stdout on success, an error naming the command otherwise.
     fn run(&self, prog: &str, args: &[&str], cwd: Option<&Path>) -> Result<String>;
+    /// Like `run`, but stopped (and reported as an error) when it takes longer than `secs`.
+    /// Test doubles that never wait keep this default.
+    fn run_within(
+        &self,
+        prog: &str,
+        args: &[&str],
+        cwd: Option<&Path>,
+        secs: u64,
+    ) -> Result<String> {
+        let _ = secs;
+        self.run(prog, args, cwd)
+    }
 }
 
 pub struct Setup<'a> {

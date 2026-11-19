@@ -5,7 +5,7 @@ use actautoma::{gh::Gh, process::ProcessRunner};
 use anyhow::{Context, Result, bail};
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 pub struct Process;
 
@@ -23,6 +23,47 @@ impl Exec for Process {
             bail!("{prog} {} exited with {}", args.join(" "), out.status);
         }
         Ok(String::from_utf8_lossy(&out.stdout).into_owned())
+    }
+
+    /// Output goes straight to the terminal (progress stays visible); the program is killed,
+    /// and the call fails saying so, when `secs` pass first.
+    fn run_within(
+        &self,
+        prog: &str,
+        args: &[&str],
+        cwd: Option<&Path>,
+        secs: u64,
+    ) -> Result<String> {
+        let mut cmd = Command::new(prog);
+        cmd.args(args);
+        if let Some(dir) = cwd {
+            cmd.current_dir(dir);
+        }
+        let mut child = cmd
+            .spawn()
+            .with_context(|| format!("{prog} not found: repo needs it"))?;
+        let deadline = Instant::now() + Duration::from_secs(secs);
+        let status = loop {
+            if let Some(status) = child
+                .try_wait()
+                .with_context(|| format!("waiting for {prog}"))?
+            {
+                break status;
+            }
+            if Instant::now() >= deadline {
+                child.kill().with_context(|| format!("stopping {prog}"))?;
+                child.wait().with_context(|| format!("reaping {prog}"))?;
+                bail!(
+                    "{prog} {} did not finish within {secs}s and was stopped; run it again by hand",
+                    args.join(" ")
+                );
+            }
+            std::thread::sleep(Duration::from_millis(100));
+        };
+        if !status.success() {
+            bail!("{prog} {} exited with {status}", args.join(" "));
+        }
+        Ok(String::new())
     }
 }
 
