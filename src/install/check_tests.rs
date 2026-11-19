@@ -19,6 +19,7 @@ fn clean() -> Fake {
     Fake::new(&[])
         .answering("git rev-parse --verify HEAD", Ok("abc\n"))
         .answering("git --no-optional-locks status --porcelain", Ok(""))
+        .answering("git worktree list --porcelain", Ok(""))
         .answering("cargo --version", Ok("cargo 1\n"))
 }
 
@@ -75,6 +76,29 @@ fn uncommitted_changes_are_refused() {
     let (d, entries) = proj();
     let f = clean().overriding("git --no-optional-locks status --porcelain", Ok(" M a\n"));
     let want = format!("project has uncommitted changes: {}", canonical(d.path()).display());
+    assert_eq!(why(project(&entries, "ss", &f)), want);
+}
+
+#[test]
+fn a_linked_worktree_kept_inside_the_project_is_not_an_uncommitted_change() {
+    let (d, entries) = proj();
+    let root = canonical(d.path());
+    let listing = format!("worktree {}\nHEAD a\n\nworktree {}/.worktrees/topic\nHEAD b\n", root.display(), root.display());
+    let f = clean()
+        .overriding("git --no-optional-locks status --porcelain", Ok("?? .worktrees/topic/\n"))
+        .overriding("git worktree list --porcelain", Ok(Box::leak(listing.into_boxed_str())));
+    assert_eq!(ok(project(&entries, "ss", &f)), root);
+}
+
+#[test]
+fn an_untracked_file_next_to_a_worktree_is_still_a_change() {
+    let (d, entries) = proj();
+    let root = canonical(d.path());
+    let listing = format!("worktree {}\nHEAD a\n\nworktree {}/.worktrees/topic\nHEAD b\n", root.display(), root.display());
+    let f = clean()
+        .overriding("git --no-optional-locks status --porcelain", Ok("?? .worktrees/topic/\n?? .worktrees/scratch/f\n"))
+        .overriding("git worktree list --porcelain", Ok(Box::leak(listing.into_boxed_str())));
+    let want = format!("project has uncommitted changes: {}", root.display());
     assert_eq!(why(project(&entries, "ss", &f)), want);
 }
 
