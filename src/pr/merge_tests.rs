@@ -53,6 +53,9 @@ impl Exec for Git {
         if self.fail.is_some_and(|p| line.starts_with(p)) {
             anyhow::bail!("{line} failed");
         }
+        if line == "git worktree list --porcelain" {
+            return Ok("worktree /repo\n".into()); // every repository has a main worktree
+        }
         Ok(String::new())
     }
 }
@@ -102,6 +105,14 @@ fn the_local_branches_are_updated_after_the_merge() {
     let r = go(yes(Some(8)), QUICK, &f, &g, "");
     assert!(r.out.contains("Updating local branches..."), "{}", r.out);
     assert!(g.log().iter().any(|l| l == "git fetch -p"), "{:?}", g.log());
+}
+
+#[test]
+fn the_merge_asks_actinstall_to_update_the_installed_binaries() {
+    let f = FakeForge::pr("Add x", Mergeable::Mergeable);
+    let g = Git::new();
+    go(yes(Some(8)), QUICK, &f, &g, "");
+    assert!(g.log().iter().any(|l| l == "actinstall update --repo /repo"), "{:?}", g.log());
 }
 
 #[test]

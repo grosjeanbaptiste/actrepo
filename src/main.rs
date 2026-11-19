@@ -1,25 +1,4 @@
 //! repo — name with actname, scaffold/manage with `dotfiles project`, PRs through actautoma.
-mod audit;
-mod branch;
-mod delegate;
-mod deploy;
-mod doctor;
-#[cfg(test)]
-mod fakes;
-mod install;
-mod license;
-mod naming;
-mod pipeline;
-mod pr;
-mod push;
-mod registry;
-mod release;
-mod rename;
-mod root;
-mod run;
-mod scaffold;
-mod workspace;
-mod worktree;
 
 use actautoma::{gh::Gh, process::ProcessRunner};
 use actit::forge_names::ForgeNames;
@@ -27,6 +6,10 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use naming::Query;
 use pipeline::{Dotfiles, NewOpts, Source};
+use repo::{
+    audit, branch, delegate, deploy, doctor, install, license, naming, pipeline, pr, push,
+    registry, release, rename, root, run, scaffold, workspace, worktree,
+};
 use scaffold::apply::Mode;
 use scaffold::command;
 use scaffold::native::{Native, Process, Quiet};
@@ -128,11 +111,20 @@ enum Cmd {
         dry_run: bool,
     },
     /// List the registered projects (name and path).
-    List,
+    List {
+        /// Print a JSON array instead of the text list.
+        #[arg(long)]
+        json: bool,
+    },
     /// Find git repositories (default root: $HOME) and refresh the registry.
     Scan { roots: Vec<String> },
     /// Branch, ahead/behind, dirty files and remote for one project, or a table of all.
-    Status { name: Option<String> },
+    Status {
+        name: Option<String>,
+        /// Print JSON (an object for NAME, else an array) instead of text.
+        #[arg(long)]
+        json: bool,
+    },
     /// Push a repository and every repository nested under it (clean tree, ahead of its upstream).
     Push {
         /// Root to scan.
@@ -226,6 +218,15 @@ enum Cmd {
 
 #[derive(Subcommand)]
 enum WtCmd {
+    /// Worktrees of the repository in the current folder.
+    List {
+        /// Print a JSON array instead of text.
+        #[arg(long)]
+        json: bool,
+        /// Add the live agent sessions working in each worktree (runs `actsessions list --json`).
+        #[arg(long)]
+        owners: bool,
+    },
     /// Remove each clean worktree whose pushed branch is contained in origin/BASE, and the branch.
     Prune {
         #[arg(long, default_value = "main")]
@@ -294,6 +295,7 @@ fn main() -> Result<()> {
             }
         },
         Cmd::Worktree { sub } => match sub {
+            WtCmd::List { json, owners } => worktree::command::run_list(json, owners),
             WtCmd::Prune { base, dry_run } => worktree::command::run_prune(&base, dry_run),
         },
         Cmd::Workspace { sub } => match sub {
@@ -368,9 +370,9 @@ fn main() -> Result<()> {
             local_only,
             dry_run,
         ),
-        Cmd::List => registry::command::run_list(),
+        Cmd::List { json } => registry::command::run_list(json),
         Cmd::Scan { roots } => registry::command::run_scan(&roots),
-        Cmd::Status { name } => registry::command::run_status(name.as_deref()),
+        Cmd::Status { name, json } => registry::command::run_status(name.as_deref(), json),
         Cmd::Push { dir, dry_run, yes } => {
             let opts = push::Opts {
                 dir: dir.into(),

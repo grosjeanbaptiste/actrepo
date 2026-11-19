@@ -20,6 +20,7 @@ fn probe() -> Fake {
     Fake::new(&[])
         .answering("git rev-parse --verify HEAD", Ok("abc\n"))
         .answering("git --no-optional-locks status --porcelain", Ok(""))
+        .answering("git worktree list --porcelain", Ok(""))
         .answering("cargo --version", Ok("cargo 1\n"))
 }
 

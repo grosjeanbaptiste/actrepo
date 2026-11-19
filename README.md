@@ -32,12 +32,13 @@ repo new package/rust --name ifdck --no-push   # exact name, still checked
 repo check [path] [--type t]                    # audit a project against the templates
 repo apply [path] [--type t] [--force|--diff]   # drop/refresh the standard files
 repo license [path]                             # none | proprietary | open | other
-repo list | scan [ROOT...] | status [NAME]      # machine-wide project registry ($DOTFILES_STATE_ROOT/projects.txt)
-repo rename OWNER/OLD NEW [--dir DIR] [--local-only] [--dry-run]   # a repository renamed everywhere: platform, origin, folder, written references, registry row
+repo list [--json] | scan [ROOT...] | status [NAME] [--json]   # machine-wide project registry ($DOTFILES_STATE_ROOT/projects.txt); --json for tools
+repo rename OWNER/OLD NEW [--dir DIR] [--into PARENT] [--local-only] [--dry-run]   # a repository renamed everywhere: platform, origin, folder, written references, registry row
 repo rename-branch [PATH] [--from master] [--to main] [--dry-run] [--delete-old]   # default branch, local + GitHub
 repo push [--dir PATH] [--dry-run] [--yes]      # push every nested repo that is clean and ahead; asks first
 repo pr create [--base B] [--title T] [--body D]    # PR for the current branch; title/description asked on stdin if not given
 repo pr merge [N] [--yes]                           # merge commit, branch deleted, base fast-forwarded locally, then, only once the head is verified contained in origin/BASE: the clean worktree holding it, the local branch and a leftover remote branch removed (a worktree with changes is kept, with a warning)
+repo worktree list [--json] [--owners]               # worktrees of the repository here: path, branch, main, detached, prunable; --owners adds the live agent sessions working in each (needs `actsessions` with `list --json`)
 repo worktree prune [--base main] [-n]               # remove each clean worktree whose pushed branch is contained in origin/BASE, and the branch; `repo pr merge` runs it
 repo workspace list | status | push [-n]            # folders of the nearest *.code-workspace ($DOTFILES_WORKSPACE_FILE overrides)
 repo workspace add NAME [--clone URL | --init TYPE] # adopt ./NAME, or clone / scaffold it first
