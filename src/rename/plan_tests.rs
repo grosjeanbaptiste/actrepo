@@ -14,7 +14,7 @@ fn registered() -> Vec<Entry> {
 }
 
 fn req<'a>(new: &'a str, dir: Option<&'a Path>) -> Request<'a> {
-    Request { slug: "me/acteses", new, dir, local_only: false }
+    Request { slug: "me/acteses", new, dir, local_only: false, into: None }
 }
 
 fn everywhere(_: &Path) -> bool {
@@ -42,7 +42,7 @@ fn an_explicit_dir_wins_over_the_registry() {
 
 #[test]
 fn an_unregistered_repository_without_dir_is_refused_never_taken_from_the_cwd() {
-    let r = Request { slug: "me/other", new: "x", dir: None, local_only: false };
+    let r = Request { slug: "me/other", new: "x", dir: None, local_only: false, into: None };
     let err = match build(&r, &registered(), &machine(), &everywhere) {
         Err(e) => e,
         Ok(_) => panic!("an unregistered repository was accepted"),
@@ -53,7 +53,7 @@ fn an_unregistered_repository_without_dir_is_refused_never_taken_from_the_cwd() 
 #[test]
 fn a_bad_slug_or_new_name_is_refused() {
     for slug in ["acteses", "/acteses", "me/"] {
-        let r = Request { slug, new: "x", dir: None, local_only: false };
+        let r = Request { slug, new: "x", dir: None, local_only: false, into: None };
         assert!(build(&r, &registered(), &machine(), &everywhere).is_err(), "{slug}");
     }
     for new in ["", ".", "..", "a/b", "acteses"] {
@@ -105,4 +105,12 @@ fn local_only_means_the_platform_already_has_the_new_name() {
     let r = Request { local_only: true, ..req("actos", None) };
     assert!(!build_ok(&r, &everywhere).plan.on_platform);
     assert!(build_ok(&req("actos", None), &everywhere).plan.on_platform);
+}
+
+#[test]
+fn into_puts_the_renamed_folder_under_another_parent() {
+    let r = Request { slug: "me/acteses", new: "actos", dir: None, local_only: false, into: Some(Path::new("/h/Source/openacte")) };
+    let p = build_ok(&r, &everywhere).plan;
+    assert_eq!(p.new_dir(), PathBuf::from("/h/Source/openacte/actos"));
+    assert!(p.roots.contains(&PathBuf::from("/h/Source/openacte/actos")));
 }

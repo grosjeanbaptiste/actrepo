@@ -117,6 +117,9 @@ enum Cmd {
         /// The local folder (default: the registry's path for OLD).
         #[arg(long)]
         dir: Option<String>,
+        /// Move the renamed folder under this parent (default: next to the old one).
+        #[arg(long)]
+        into: Option<String>,
         /// The platform already carries the new name: skip the platform rename.
         #[arg(long)]
         local_only: bool,
@@ -354,9 +357,17 @@ fn main() -> Result<()> {
             slug,
             new,
             dir,
+            into,
             local_only,
             dry_run,
-        } => rename::command::run(&slug, &new, dir.as_deref(), local_only, dry_run),
+        } => rename::command::run(
+            &slug,
+            &new,
+            dir.as_deref(),
+            into.as_deref(),
+            local_only,
+            dry_run,
+        ),
         Cmd::List => registry::command::run_list(),
         Cmd::Scan { roots } => registry::command::run_scan(&roots),
         Cmd::Status { name } => registry::command::run_status(name.as_deref()),
