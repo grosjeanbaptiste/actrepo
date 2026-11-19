@@ -12,7 +12,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 /// A directory first (`.` included), else a registered name.
-fn resolve(name: &str, entries: &[Entry]) -> Result<PathBuf> {
+pub(crate) fn resolve(name: &str, entries: &[Entry]) -> Result<PathBuf> {
     if Path::new(name).is_dir() {
         return std::fs::canonicalize(name).with_context(|| format!("resolving {name}"));
     }

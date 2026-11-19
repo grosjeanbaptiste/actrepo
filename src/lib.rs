@@ -4,6 +4,7 @@ pub mod audit;
 pub mod branch;
 pub mod delegate;
 pub mod deploy;
+pub mod device;
 pub mod doctor;
 #[cfg(test)]
 pub mod fakes;
