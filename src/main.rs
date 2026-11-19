@@ -9,6 +9,7 @@ mod fakes;
 mod install;
 mod license;
 mod naming;
+mod need;
 mod orchestrate;
 mod pipeline;
 mod pr;
@@ -68,6 +69,12 @@ enum Cmd {
         /// Scaffold with `dotfiles project setup` instead of the built-in Rust code.
         #[arg(long)]
         via_dotfiles: bool,
+        /// Ask actit first whether a tool already covers this need; a reusable one stops the creation.
+        #[arg(long)]
+        need: Option<String>,
+        /// Create the repository even though a reusable tool exists for `--need`.
+        #[arg(long, requires = "need")]
+        force: bool,
     },
     /// Audit a project against the standard templates.
     Check {
@@ -436,7 +443,12 @@ fn main() -> Result<()> {
             no_push,
             dry_run,
             via_dotfiles,
+            need,
+            force,
         } => {
+            if let Some(need) = &need {
+                need::check(need, force, &need::ActitTools, &mut std::io::stderr())?;
+            }
             let native = Native::from_env()?;
             let kind = match kind {
                 Some(kind) => kind,
