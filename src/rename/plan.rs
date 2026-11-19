@@ -17,6 +17,8 @@ pub struct Request<'a> {
     pub new: &'a str,
     pub dir: Option<&'a Path>,
     pub local_only: bool,
+    /// Parent folder of the renamed folder; `None` keeps it next to the old one.
+    pub into: Option<&'a Path>,
 }
 
 pub struct Planned {
@@ -79,7 +81,10 @@ pub fn build(
         (None, Some(dir)) => dir,
         (None, None) => bail!("{old} is not registered: give its folder with --dir"),
     };
-    let new_dir = old_dir.with_file_name(req.new);
+    let new_dir = req.into.map_or_else(
+        || old_dir.with_file_name(req.new),
+        |parent| parent.join(req.new),
+    );
     let memory = machine.home.join("claude-memory");
     let mut warnings = vec![];
     let mut roots = vec![new_dir];
@@ -110,6 +115,8 @@ pub fn build(
         children,
         bin_dir: machine.bin_dir.clone(),
         on_platform: !req.local_only,
+        registry: None, // `command::run` renames the registry row itself, and reports a write failure
+        into: req.into.map(Path::to_path_buf),
     };
     Ok(Planned { plan, warnings })
 }

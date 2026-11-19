@@ -2,7 +2,7 @@
 //! whole pipeline is testable: GitHub (`RepoNames`) and `dotfiles` (`Scaffold`).
 use crate::naming::{self, Query};
 use actit::ports::RepoNames;
-use anyhow::{Result, bail};
+use anyhow::{Context, Result, bail};
 use std::path::{Path, PathBuf};
 
 pub enum Source {
@@ -18,6 +18,8 @@ pub struct NewOpts {
     pub root: PathBuf,
     pub no_push: bool,
     pub dry_run: bool,
+    /// The machine registry (`projects.txt`) that learns the new project.
+    pub registry: Option<PathBuf>,
 }
 
 /// Creates the directory, scaffolds it, commits, and pushes unless `no_push`.
@@ -51,6 +53,11 @@ pub fn run(opts: &NewOpts, names: &impl RepoNames, scaffold: &impl Scaffold) -> 
     let name = choose(&opts.source, &opts.root, names)?;
     if !opts.dry_run {
         scaffold.setup(&opts.kind, &name, &opts.root, opts.no_push)?;
+        if let Some(file) = &opts.registry {
+            crate::registry::file::add(file, &name, &opts.root.join(&name)).with_context(|| {
+                format!("registry: {name} was scaffolded but could not be registered")
+            })?;
+        }
     }
     Ok(name)
 }

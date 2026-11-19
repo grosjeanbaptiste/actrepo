@@ -109,3 +109,55 @@ fn list_sorts_case_insensitively_with_the_exact_name_as_tie_break() {
     let names: Vec<String> = list(&v).lines().map(|l| l.split_whitespace().next().unwrap_or("").to_string()).collect();
     assert_eq!(names, ["Alpha", "alpha", "beta", "Gamma"]);
 }
+
+fn reg(text: &str) -> (tempfile::TempDir, PathBuf) {
+    let dir = ok(tempfile::tempdir());
+    let file = dir.path().join("projects.txt");
+    ok(fs::write(&file, text));
+    (dir, file)
+}
+
+#[test]
+fn add_appends_a_row_and_keeps_the_others() {
+    let (_d, file) = reg("a|/x/a\n");
+    assert_eq!(ok(add(&file, "b", Path::new("/x/b"))), Added::New);
+    assert_eq!(ok(fs::read_to_string(&file)), "a|/x/a\nb|/x/b\n");
+}
+
+#[test]
+fn add_to_a_file_without_final_newline_does_not_glue_two_rows() {
+    let (_d, file) = reg("a|/x/a");
+    ok(add(&file, "b", Path::new("/x/b")));
+    assert_eq!(ok(fs::read_to_string(&file)), "a|/x/a\nb|/x/b\n");
+}
+
+#[test]
+fn add_of_a_row_already_there_changes_nothing_and_says_so() {
+    let (_d, file) = reg("a|/x/a\n");
+    assert_eq!(ok(add(&file, "a", Path::new("/x/a"))), Added::AlreadyListed);
+    assert_eq!(ok(fs::read_to_string(&file)), "a|/x/a\n");
+}
+
+#[test]
+fn add_refuses_a_name_listed_at_another_path() {
+    let (_d, file) = reg("a|/x/a\n");
+    let err = add(&file, "a", Path::new("/y/a")).err().map(|e| e.to_string()).unwrap_or_default();
+    assert!(err.contains("a") && err.contains("/x/a") && err.contains("/y/a"), "{err}");
+    assert_eq!(ok(fs::read_to_string(&file)), "a|/x/a\n");
+}
+
+#[test]
+fn add_refuses_a_row_a_name_or_path_could_corrupt() {
+    let (_d, file) = reg("");
+    assert!(add(&file, "a|b", Path::new("/x")).is_err());
+    assert!(add(&file, "a", Path::new("/x\ny")).is_err());
+    assert!(add(&file, "", Path::new("/x")).is_err());
+    assert_eq!(ok(fs::read_to_string(&file)), "");
+}
+
+#[test]
+fn add_to_a_missing_registry_is_an_error_not_a_new_file() {
+    let dir = ok(tempfile::tempdir());
+    let file = dir.path().join("none").join("projects.txt");
+    assert!(add(&file, "a", Path::new("/x/a")).is_err());
+}

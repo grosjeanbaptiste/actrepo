@@ -244,3 +244,87 @@ fn a_merged_branch_is_deleted_even_when_the_local_head_does_not_contain_it() {
     assert_eq!(ok(r), 1, "{out}");
     assert!(!branch_exists(&w.work, "feat"), "{out}");
 }
+
+/// Real git; any other program (here `actinstall`) is recorded, never run.
+struct Spy(std::cell::RefCell<Vec<String>>);
+
+impl Exec for Spy {
+    fn run(&self, prog: &str, args: &[&str], cwd: Option<&Path>) -> Result<String> {
+        if prog == "git" {
+            return Process.run(prog, args, cwd);
+        }
+        self.0.borrow_mut().push(format!("{prog} {}", args.join(" ")));
+        Ok(String::new())
+    }
+}
+
+fn prune_command(w: &World, dry_run: bool) -> (Result<()>, Vec<String>) {
+    let spy = Spy(Default::default());
+    let (mut out, mut err) = (Vec::new(), Vec::new());
+    let r = crate::worktree::command::prune_and_refresh(&Quiet, &spy, &w.work, "main", dry_run, &mut out, &mut err);
+    (r, spy.0.into_inner())
+}
+
+#[test]
+fn a_pruned_worktree_asks_actinstall_to_update_the_repository() {
+    let w = world();
+    feature(&w, "feat", true);
+    merge_on_remote(&w, "feat");
+    let (r, calls) = prune_command(&w, false);
+    ok(r);
+    let main = ok(w.work.canonicalize());
+    assert_eq!(calls, [format!("actinstall update --repo {}", main.display())]);
+}
+
+#[test]
+fn nothing_pruned_or_a_dry_run_installs_nothing() {
+    let w = world();
+    let (r, calls) = prune_command(&w, false);
+    ok(r);
+    assert!(calls.is_empty());
+    feature(&w, "feat", true);
+    merge_on_remote(&w, "feat");
+    let (r, calls) = prune_command(&w, true);
+    ok(r);
+    assert!(calls.is_empty());
+}
+
+fn detached_at(w: &World, name: &str, rev: &str) -> PathBuf {
+    let wt = w.base.join(name);
+    git(&w.work, &["worktree", "add", "-q", "--detach", &wt.display().to_string(), rev]);
+    wt
+}
+
+#[test]
+fn a_clean_worktree_detached_in_origin_base_holds_nothing_and_goes() {
+    let w = world();
+    let wt = detached_at(&w, "left-over", "origin/main");
+    let (r, out) = prune_in(&w, false);
+    assert_eq!(ok(r), 1, "{out}");
+    assert!(!wt.exists(), "{out}");
+}
+
+#[test]
+fn a_detached_worktree_with_its_own_commit_or_changes_is_kept() {
+    let w = world();
+    let behind = detached_at(&w, "behind", "origin/main");
+    commit(&behind, "mine"); // detached, but no longer at origin/main
+    let dirty = detached_at(&w, "dirty", "origin/main");
+    ok(fs::write(dirty.join("scratch"), "wip"));
+    let (r, out) = prune_in(&w, false);
+    assert_eq!(ok(r), 0, "{out}");
+    assert!(behind.exists() && dirty.exists());
+    assert!(out.contains("kept") && out.contains("dirty"), "{out}");
+}
+
+#[test]
+fn a_worktree_detached_at_an_older_commit_of_origin_base_goes_too() {
+    let w = world();
+    feature(&w, "feat", true);
+    merge_on_remote(&w, "feat");
+    git(&w.work, &["fetch", "-q"]);
+    let old = detached_at(&w, "old", "main"); // the commit before the merge, contained in origin/main
+    let (r, out) = prune_in(&w, false);
+    assert!(ok(r) >= 1, "{out}");
+    assert!(!old.exists(), "{out}");
+}

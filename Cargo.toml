@@ -7,10 +7,12 @@ description = "Manage git repositories: names from actname, scaffolding and stat
 
 [dependencies]
 actname = { git = "ssh://git@github.com/grosjeanbaptiste/Actname.git", rev = "dfc9f80b91b2e4df1c6bd3a077385df765cd43cf" }
-actit = { git = "ssh://git@github.com/grosjeanbaptiste/Actit.git", rev = "6f51ca283755f26aea074b5f6b95c6e477b10121" }
-actautoma = { git = "https://github.com/grosjeanbaptiste/actautoma", rev = "dde05e0d29ad9feb7bcd4e56d8a76a3aab1ff067" }
+actit = { git = "ssh://git@github.com/grosjeanbaptiste/Actit.git", rev = "a63580d4c984b75afea293cb5aa1a9bd3317de28" }
+actautoma = { git = "https://github.com/grosjeanbaptiste/actautoma", rev = "3965fc3840298ee5d5b403c502474c2ff243c966" }
+actdevice = { git = "ssh://git@github.com/grosjeanbaptiste/actdevice.git", rev = "d5a6da90b2c817809dc1c19a1e38f4a464b03d47" }
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1.0.154", features = ["preserve_order"] }
 
 [lints.rust]
