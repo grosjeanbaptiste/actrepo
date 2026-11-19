@@ -33,6 +33,9 @@ repo check [path] [--type t]                    # audit a project against the te
 repo apply [path] [--type t] [--force|--diff]   # drop/refresh the standard files
 repo license [path]                             # none | proprietary | open | other
 repo list [--json] | scan [ROOT...] | status [NAME] [--json]   # machine-wide project registry ($DOTFILES_STATE_ROOT/projects.txt); --json for tools
+repo actit "<need>" | --name N [--owner O] [--contains]   # actit in-process: does a tool exist / is a repository name taken (exit 0, 1; 2 is an error)
+repo actname generate --prefix act --domain "<words>" [...]   # actname in-process: propose names
+repo actautoma rename-repo OWNER/OLD NEW [--dir D] [--dry-run] # actautoma in-process (what `repo rename` wraps)
 repo rename OWNER/OLD NEW [--dir DIR] [--into PARENT] [--local-only] [--dry-run]   # a repository renamed everywhere: platform, origin, folder, written references, registry row
 repo rename-branch [PATH] [--from master] [--to main] [--dry-run] [--delete-old]   # default branch, local + GitHub
 repo push [--dir PATH] [--dry-run] [--yes]      # push every nested repo that is clean and ahead; asks first

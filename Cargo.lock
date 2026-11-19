@@ -33,7 +33,7 @@ dependencies = [
 [[package]]
 name = "actname"
 version = "0.1.0"
-source = "git+ssh://git@github.com/grosjeanbaptiste/Actname.git?rev=001768ae0b3ee3e68a5c4f6266186eb0bb922e98#001768ae0b3ee3e68a5c4f6266186eb0bb922e98"
+source = "git+ssh://git@github.com/grosjeanbaptiste/Actname.git?rev=dfc9f80b91b2e4df1c6bd3a077385df765cd43cf#dfc9f80b91b2e4df1c6bd3a077385df765cd43cf"
 
 [[package]]
 name = "adler2"

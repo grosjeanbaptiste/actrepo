@@ -11,6 +11,7 @@ pub mod fakes;
 pub mod install;
 pub mod license;
 pub mod naming;
+pub mod orchestrate;
 pub mod pipeline;
 pub mod pr;
 pub mod push;

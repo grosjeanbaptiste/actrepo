@@ -2,13 +2,13 @@
 
 use actautoma::{gh::Gh, process::ProcessRunner};
 use actit::forge_names::ForgeNames;
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use naming::Query;
 use pipeline::{Dotfiles, NewOpts, Source};
 use repo::{
-    audit, branch, delegate, deploy, device, doctor, install, license, naming, pipeline, pr, push,
-    registry, release, rename, root, run, scaffold, workspace, worktree,
+    audit, branch, delegate, deploy, device, doctor, install, license, naming, orchestrate,
+    pipeline, pr, push, registry, release, rename, root, run, scaffold, workspace, worktree,
 };
 use scaffold::apply::Mode;
 use scaffold::command;
@@ -211,6 +211,21 @@ enum Cmd {
         #[command(subcommand)]
         sub: WtCmd,
     },
+    /// Run actit in-process: `repo actit "<need>"`, `repo actit --name N [--owner O] [--contains]`.
+    Actit {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Run actname in-process: `repo actname generate --prefix act --domain "<words>"`.
+    Actname {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
+    /// Run actautoma in-process: `repo actautoma rename-repo OWNER/OLD NEW [--dir D] [--dry-run]`.
+    Actautoma {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
     /// Candidates for the shell completion (used by `repo completions`).
     #[command(
         name = "__complete",
@@ -358,6 +373,19 @@ fn main() -> Result<()> {
             code => std::process::exit(code), // the project's own failure: its code, its diagnostics
         },
         Cmd::Doctor { path } => doctor::command::command(Path::new(&path)),
+        Cmd::Actit { args } => {
+            let env = |key: &str| std::env::var(key).ok();
+            match orchestrate::actit(&args, &env, &mut std::io::stdout().lock())? {
+                0 => Ok(()),
+                code => std::process::exit(code), // actit's verdict: its code
+            }
+        }
+        Cmd::Actname { args } => orchestrate::actname(&args, &mut std::io::stdout().lock()),
+        Cmd::Actautoma { args } => {
+            let env = |key: &str| std::env::var(key).ok();
+            let cwd = std::env::current_dir().context("no current folder")?;
+            orchestrate::actautoma(&args, &cwd, &env, &mut std::io::stdout().lock())
+        }
         Cmd::Complete { words } => device::command::complete(&words),
         Cmd::Completions { shell } => {
             print!("{}", device::completions::script(&shell)?);
