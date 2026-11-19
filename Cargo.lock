@@ -13,7 +13,7 @@ dependencies = [
 [[package]]
 name = "actit"
 version = "0.1.0"
-source = "git+ssh://git@github.com/grosjeanbaptiste/Actit.git?rev=b3ac445237969a76d0d0286fc381f67e8e248ee4#b3ac445237969a76d0d0286fc381f67e8e248ee4"
+source = "git+ssh://git@github.com/grosjeanbaptiste/Actit.git?rev=5030555ba763739d156c3932c241d45b4eaa28b1#5030555ba763739d156c3932c241d45b4eaa28b1"
 dependencies = [
  "actautoma",
  "serde",
