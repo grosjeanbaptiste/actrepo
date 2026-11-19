@@ -84,6 +84,45 @@ pub fn find(entries: &[Entry], name: &str) -> Option<PathBuf> {
         .map(|e| e.path.clone())
 }
 
+/// What `add` did.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Added {
+    New,
+    AlreadyListed,
+}
+
+/// Append `name|path` to the registry. A row already there is reported, a name
+/// listed at another path is an error, and a name or path that would break the
+/// one-row-per-line format is refused. The registry must already exist.
+pub fn add(file: &Path, name: &str, path: &Path) -> Result<Added> {
+    let shown = path.display().to_string();
+    if name.trim().is_empty()
+        || [name, shown.as_str()]
+            .iter()
+            .any(|t| t.contains(['|', '\n', '\r']))
+    {
+        bail!("cannot register {name:?} at {shown:?}: empty or holds | or a line break");
+    }
+    let text = fs::read_to_string(file).with_context(|| format!("reading {}", file.display()))?;
+    if let Some(at) = find(&parse(&text)?, name) {
+        if at == path {
+            return Ok(Added::AlreadyListed);
+        }
+        bail!(
+            "{name} is already registered at {}, not {shown}",
+            at.display()
+        );
+    }
+    let glue = if text.is_empty() || text.ends_with('\n') {
+        ""
+    } else {
+        "\n"
+    };
+    fs::write(file, format!("{text}{glue}{name}|{shown}\n"))
+        .with_context(|| format!("writing {}", file.display()))?;
+    Ok(Added::New)
+}
+
 /// The `list` report: sorted, `(missing)` flags a path gone from disk.
 pub fn list(entries: &[Entry]) -> String {
     let mut out = String::new();
