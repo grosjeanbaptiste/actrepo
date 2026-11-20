@@ -18,7 +18,7 @@ use scaffold::{plan, prompt};
 use std::path::Path;
 
 #[derive(Parser)]
-#[command(version, about)]
+#[command(name = "actrepo", bin_name = "actrepo", version, about)]
 struct Cli {
     #[command(subcommand)]
     cmd: Cmd,
@@ -317,7 +317,7 @@ enum WsCmd {
     },
 }
 
-fn main() -> Result<()> {
+pub fn main() -> Result<()> {
     match Cli::parse().cmd {
         Cmd::Pr { sub } => match sub {
             PrCmd::Create { base, title, body } => {
