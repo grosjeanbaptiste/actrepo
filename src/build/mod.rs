@@ -1,4 +1,4 @@
-//! `repo <dir> build [--clean] [main.tex]`: the artifact of a folder, through actmake.
+//! `repo <dir> build [--clean] [--release] [--target T] [source]`: the artifact of a folder, through actmake.
 use crate::kind::detect;
 use crate::registry::file::{path, read};
 use crate::run::resolve;
@@ -20,17 +20,27 @@ pub fn is_build_request(args: &[String]) -> bool {
 pub fn parse(args: &[String]) -> Result<Request> {
     let [name, verb, rest @ ..] = args else {
         bail!(
-            "usage: repo <dir> build [--clean] [source] (got: {})",
+            "usage: repo <dir> build [--clean] [--release] [--target T] [source] (got: {})",
             args.join(" ")
         );
     };
     if verb != "build" {
-        bail!("unknown command `{name} {verb}`; expected: repo {name} build [--clean] [source]");
+        bail!(
+            "unknown command `{name} {verb}`; expected: repo {name} build [--clean] [--release] [--target T] [source]"
+        );
     }
     let mut opts = Options::default();
-    for word in rest {
+    let mut words = rest.iter();
+    while let Some(word) = words.next() {
         match word.as_str() {
             "--clean" => opts.clean = true,
+            "--release" => opts.release = true,
+            "--target" => {
+                let value = words
+                    .next()
+                    .ok_or_else(|| anyhow::anyhow!("--target needs a value"))?;
+                opts.target = Some(value.clone());
+            }
             flag if flag.starts_with('-') => bail!("unknown option {flag}"),
             _ if opts.main.is_some() => bail!("one source file only; got a second: {word}"),
             _ => opts.main = Some(word.clone()),
