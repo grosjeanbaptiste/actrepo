@@ -4,3 +4,4 @@ pub mod command;
 pub mod create;
 pub mod merge;
 pub mod own;
+pub mod sync;

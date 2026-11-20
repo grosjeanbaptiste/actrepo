@@ -109,8 +109,8 @@ fn local_only_means_the_platform_already_has_the_new_name() {
 
 #[test]
 fn into_puts_the_renamed_folder_under_another_parent() {
-    let r = Request { slug: "me/acteses", new: "actos", dir: None, local_only: false, into: Some(Path::new("/h/Source/openacte")) };
+    let r = Request { slug: "me/acteses", new: "actos", dir: None, local_only: false, into: Some(Path::new("/h/Source/Acteble/openacte")) };
     let p = build_ok(&r, &everywhere).plan;
-    assert_eq!(p.new_dir(), PathBuf::from("/h/Source/openacte/actos"));
-    assert!(p.roots.contains(&PathBuf::from("/h/Source/openacte/actos")));
+    assert_eq!(p.new_dir(), PathBuf::from("/h/Source/Acteble/openacte/actos"));
+    assert!(p.roots.contains(&PathBuf::from("/h/Source/Acteble/openacte/actos")));
 }

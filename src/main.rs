@@ -233,6 +233,11 @@ enum Cmd {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
+    /// Move a folder under another parent, one repository or a folder of them (found by scanning): `actrepo move DIR --into PARENT [--dry-run]`.
+    Move {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
     /// Candidates for the shell completion (used by `actrepo completions`).
     #[command(
         name = "__complete",
@@ -391,6 +396,12 @@ pub fn main() -> Result<()> {
         Cmd::Actautoma { args } => {
             let env = |key: &str| std::env::var(key).ok();
             let cwd = std::env::current_dir().context("no current folder")?;
+            orchestrate::actautoma(&args, &cwd, &env, &mut std::io::stdout().lock())
+        }
+        Cmd::Move { args } => {
+            let env = |key: &str| std::env::var(key).ok();
+            let cwd = std::env::current_dir().context("no current folder")?;
+            let args: Vec<String> = ["move".to_string()].into_iter().chain(args).collect();
             orchestrate::actautoma(&args, &cwd, &env, &mut std::io::stdout().lock())
         }
         Cmd::Complete { words } => device::command::complete(&words),
