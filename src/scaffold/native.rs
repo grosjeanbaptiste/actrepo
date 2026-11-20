@@ -105,7 +105,7 @@ pub fn year_of(secs: u64) -> u64 {
     yoe + era * 400 + u64::from(mp >= 10)
 }
 
-/// Templates live in dotfiles (`PROJECT_REPO_ROOT`/`DOTFILES_REPO_ROOT`, else `~/dotfiles`).
+/// Templates live in dotfiles (`PROJECT_REPO_ROOT`/`DOTFILES_REPO_ROOT`, else `~/Source/dotfiles`).
 pub fn templates_root(env: impl Fn(&str) -> Option<String>) -> Result<PathBuf> {
     for key in ["PROJECT_REPO_ROOT", "DOTFILES_REPO_ROOT"] {
         if let Some(v) = env(key).filter(|v| !v.is_empty()) {

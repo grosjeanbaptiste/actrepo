@@ -3,9 +3,9 @@
 Manage git repositories by reusing what exists:
 
 - **actname** (Rust library, pinned by commit) names the repository.
-- **`actrepo` itself** scaffolds it (`src/scaffold/`: mkdir, git init, templates from `~/dotfiles/project-templates`, commit, private GitHub repo via `gh`); `--via-dotfiles` uses the old `dotfiles project setup` instead.
+- **`actrepo` itself** scaffolds it (`src/scaffold/`: mkdir, git init, templates from `~/Source/dotfiles/project-templates`, commit, private GitHub repo via `gh`); `--via-dotfiles` uses the old `dotfiles project setup` instead.
 - **`dotfiles project`** keeps only what is not repository management (`tex`, `docker`, `db`, `redis`, `flutter-device`); everything else lives in `actrepo` (see `CONTEXT.md`).
-- **Prerequisites:** `git` and `gh` on `PATH`; templates are read from `~/dotfiles/project-templates` (`PROJECT_REPO_ROOT` / `DOTFILES_REPO_ROOT` override the root).
+- **Prerequisites:** `git` and `gh` on `PATH`; templates are read from `~/Source/dotfiles/project-templates` (`PROJECT_REPO_ROOT` / `DOTFILES_REPO_ROOT` override the root).
 - **actit** (Rust library, pinned by commit) checks that the name is free on GitHub, under any owner, through `gh`.
 
 ## Install
@@ -37,6 +37,7 @@ actrepo actit "<need>" | --name N [--owner O] [--contains]   # actit in-process:
 actrepo actname generate --prefix act --domain "<words>" [...]   # actname in-process: propose names
 actrepo actautoma rename-repo OWNER/OLD NEW [--dir D] [--dry-run] # actautoma in-process (what `actrepo rename` wraps)
 actrepo rename OWNER/OLD NEW [--dir DIR] [--into PARENT] [--local-only] [--dry-run]   # a repository renamed everywhere: platform, origin, folder, written references, registry row
+actrepo move DIR --into PARENT [--fleet DIR]... [--dry-run]   # a folder and every repository under it (worktrees included) moved in one step; repos found by scanning, every path written in them corrected (actautoma move)
 actrepo rename-branch [PATH] [--from master] [--to main] [--dry-run] [--delete-old]   # default branch, local + GitHub
 actrepo push [--dir PATH] [--dry-run] [--yes]      # push every nested repo that is clean and ahead; asks first
 actrepo pr create [--base B] [--title T] [--body D]    # PR for the current branch; title/description asked on stdin if not given
