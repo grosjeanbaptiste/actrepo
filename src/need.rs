@@ -21,6 +21,8 @@ pub struct Tool {
 pub struct Reuse {
     /// Confirmed tools whose licence allows reuse.
     pub reusable: Vec<Tool>,
+    /// Candidates whose licence allows reuse but that no documentation confirms: reported, never blocking.
+    pub unconfirmed: Vec<Tool>,
     /// Confirmed tools whose licence does not (copyleft outside the policy, unknown...).
     pub blocked: Vec<Tool>,
     /// Candidates actit could not read, with the reason: never dropped silently.
@@ -61,9 +63,12 @@ fn tool_of(finding: &actit::model::Finding, check: &actit::license::Check) -> To
 /// The tools of an actit outcome, split by what their licence allows.
 pub fn reuse_of(outcome: &Outcome) -> Reuse {
     let mut reuse = Reuse::default();
+    let confirmed = outcome.report.verdict == actit::model::Verdict::Exists;
     for (finding, check) in outcome.report.findings.iter().zip(&outcome.licenses) {
         let tool = tool_of(finding, check);
-        if check.allowed {
+        if check.allowed && !confirmed {
+            reuse.unconfirmed.push(tool);
+        } else if check.allowed {
             reuse.reusable.push(tool);
         } else {
             reuse.blocked.push(tool);
@@ -98,6 +103,13 @@ pub fn check(
     }
     for t in &reuse.blocked {
         writeln!(err, "found but not reusable: {}", describe(t))?;
+    }
+    for t in &reuse.unconfirmed {
+        writeln!(
+            err,
+            "warn: candidate not confirmed by any documentation: {}",
+            describe(t)
+        )?;
     }
     for t in &reuse.reusable {
         writeln!(
