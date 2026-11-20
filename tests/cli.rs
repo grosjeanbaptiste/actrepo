@@ -2,7 +2,7 @@
 use std::process::{Command, Output};
 
 fn repo(args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_repo"))
+    Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(args)
         .output()
         .unwrap_or_else(|e| panic!("cannot run repo: {e}"))
@@ -137,7 +137,7 @@ fn github_limits_are_enforced_before_any_network_call() {
 
 #[test]
 fn a_missing_home_is_reported_by_name_with_the_default_root() {
-    let out = Command::new(env!("CARGO_BIN_EXE_repo"))
+    let out = Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(["new", "package/rust", "--name", "ifdck"])
         .env_remove("HOME")
         .output()

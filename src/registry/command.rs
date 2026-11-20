@@ -1,4 +1,4 @@
-//! `repo list|scan|status`: the registry commands, wired to the real process and environment.
+//! `actrepo list|scan|status`: the registry commands, wired to the real process and environment.
 use super::file::{find, list, path, read};
 use super::json;
 use super::{scan::scan, status};
@@ -17,7 +17,7 @@ pub fn run_list(as_json: bool) -> Result<()> {
         return Ok(());
     }
     if entries.is_empty() {
-        eprintln!("No projects registered yet. Run: repo scan");
+        eprintln!("No projects registered yet. Run: actrepo scan");
     }
     print!("{}", list(&entries));
     Ok(())

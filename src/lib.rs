@@ -1,4 +1,4 @@
-//! repo as a library: the registry, status and worktree readers other tools call instead of parsing `repo` output.
+//! actrepo as a library: the registry, status and worktree readers other tools call instead of parsing `repo` output.
 pub mod actinstall;
 pub mod audit;
 pub mod branch;

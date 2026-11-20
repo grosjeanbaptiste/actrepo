@@ -1,4 +1,4 @@
-//! `repo deploy`: the real processes, environment and terminal.
+//! `actrepo deploy`: the real processes, environment and terminal.
 use super::target::{Choice, Env};
 use super::tool::{Call, Tool};
 use super::vars::Vars;

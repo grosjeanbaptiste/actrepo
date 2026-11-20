@@ -1,8 +1,8 @@
-//! `repo actit|actname|actautoma` end to end through the binary. No network.
+//! `actrepo actit|actname|actautoma` end to end through the binary. No network.
 use std::process::{Command, Output};
 
 fn repo(args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_repo"))
+    Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(args)
         .output()
         .unwrap_or_else(|e| panic!("{e}"))

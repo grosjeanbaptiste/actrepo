@@ -45,7 +45,7 @@ fn fx() -> Fx {
 }
 
 fn repo(f: &Fx, args: &[&str]) -> Output {
-    ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+    ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(args)
         .env("DOTFILES_STATE_ROOT", f.base.join("state"))
         .env("STAGE", &f.base)

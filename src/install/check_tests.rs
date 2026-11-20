@@ -40,8 +40,8 @@ fn a_clean_committed_cargo_project_gives_its_canonical_path() {
 #[test]
 fn an_unknown_project_is_named_with_the_way_to_list_them() {
     let (_d, entries) = proj();
-    assert_eq!(why(project(&entries, "zz", &clean())), "Unknown project: zz (run repo list)");
-    assert_eq!(why(project(&[], "ss", &clean())), "Unknown project: ss (run repo list)");
+    assert_eq!(why(project(&entries, "zz", &clean())), "Unknown project: zz (run actrepo list)");
+    assert_eq!(why(project(&[], "ss", &clean())), "Unknown project: ss (run actrepo list)");
 }
 
 #[test]

@@ -44,6 +44,22 @@ version = "0.1.0"
 source = "git+ssh://git@github.com/grosjeanbaptiste/Actname.git?rev=dfc9f80b91b2e4df1c6bd3a077385df765cd43cf#dfc9f80b91b2e4df1c6bd3a077385df765cd43cf"
 
 [[package]]
+name = "actrepo"
+version = "0.1.0"
+dependencies = [
+ "actautoma",
+ "actdevice",
+ "actit",
+ "actmake",
+ "actname",
+ "anyhow",
+ "clap",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
+
+[[package]]
 name = "acttex"
 version = "0.1.0"
 source = "git+ssh://git@github.com/grosjeanbaptiste/acttex.git?rev=c7532f3d9c54c488d9ae2b60ecfb30233e959bff#c7532f3d9c54c488d9ae2b60ecfb30233e959bff"
@@ -506,22 +522,6 @@ name = "r-efi"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
-
-[[package]]
-name = "repo"
-version = "0.1.0"
-dependencies = [
- "actautoma",
- "actdevice",
- "actit",
- "actmake",
- "actname",
- "anyhow",
- "clap",
- "serde",
- "serde_json",
- "tempfile",
-]
 
 [[package]]
 name = "ring"

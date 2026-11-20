@@ -1,4 +1,4 @@
-//! The real ports of `repo audit`: process environment, `PATH`, the secret store, stdout.
+//! The real ports of `actrepo audit`: process environment, `PATH`, the secret store, stdout.
 use super::diag::Host;
 use super::{resolve, which};
 use crate::registry::file::state_root;

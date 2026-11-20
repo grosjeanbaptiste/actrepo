@@ -1,4 +1,4 @@
-//! The real ports of `repo worktree`: git on the process, stdout.
+//! The real ports of `actrepo worktree`: git on the process, stdout.
 use super::list::{json, list, text};
 use super::owners::{assign, live};
 use super::prune::prune;

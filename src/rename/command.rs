@@ -1,4 +1,4 @@
-//! `repo rename`, wired to the real machine and, through actautoma, the hosting platform.
+//! `actrepo rename`, wired to the real machine and, through actautoma, the hosting platform.
 use super::entry::renamed;
 use super::plan::{Machine, Request, build};
 use super::slug::qualify;

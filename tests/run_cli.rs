@@ -1,4 +1,4 @@
-//! `repo run` end to end: a real registry and project directory, scripted `make`, `cargo`, `melos` and `dotfiles`.
+//! `actrepo run` end to end: a real registry and project directory, scripted `make`, `cargo`, `melos` and `dotfiles`.
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -57,7 +57,7 @@ fn fx(files: &[(&str, &str)]) -> Fx {
 impl Fx {
     fn repo(&self, args: &[&str], extra: &[(&str, &str)]) -> Output {
         let path = format!("{}:/usr/bin:/bin", self.base.join("bin").display());
-        ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+        ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
             .arg("run")
             .args(args)
             .current_dir(&self.base)

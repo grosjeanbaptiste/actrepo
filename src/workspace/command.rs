@@ -1,4 +1,4 @@
-//! The real ports of `repo workspace`: the file lookup, git, stdout.
+//! The real ports of `actrepo workspace`: the file lookup, git, stdout.
 use super::edit::{self, Source};
 use super::{push, show};
 use crate::scaffold::native::{Process, Quiet, templates_root, year_now};

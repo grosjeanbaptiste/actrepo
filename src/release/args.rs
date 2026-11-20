@@ -1,4 +1,4 @@
-//! Arguments of `repo release`: our flags first, everything else forwarded to the release script.
+//! Arguments of `actrepo release`: our flags first, everything else forwarded to the release script.
 use anyhow::{Result, bail};
 
 #[derive(Debug, PartialEq, Eq, Default)]

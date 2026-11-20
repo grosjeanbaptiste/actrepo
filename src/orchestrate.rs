@@ -1,4 +1,4 @@
-//! `repo actit|actname|actautoma ...`: the three tools run in-process through their own
+//! `actrepo actit|actname|actautoma ...`: the three tools run in-process through their own
 //! library entry points, with their own arguments, answers and exit codes.
 use actautoma::{gh::Gh, process::ProcessRunner};
 use anyhow::{Error, Result, anyhow};

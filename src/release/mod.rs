@@ -1,4 +1,4 @@
-//! `repo release` (port of dotfiles `project release`): run the project's release script with the profile and `.envrc` loaded.
+//! `actrepo release` (port of dotfiles `project release`): run the project's release script with the profile and `.envrc` loaded.
 pub mod args;
 pub mod command;
 pub mod launch;

@@ -1,4 +1,4 @@
-//! `repo check|apply [path]`: the standard-vs-project audit and refresh.
+//! `actrepo check|apply [path]`: the standard-vs-project audit and refresh.
 use super::apply::{Mode, sync};
 use super::native::{Process, templates_root, year_now};
 use super::{

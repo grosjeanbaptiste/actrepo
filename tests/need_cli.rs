@@ -1,9 +1,9 @@
-//! `repo new --need` through the real binary. No network: clap refuses, or actit's indexer
+//! `actrepo new --need` through the real binary. No network: clap refuses, or actit's indexer
 //! is a closed local port, so nothing is created and no name is printed.
 use std::process::{Command, Output};
 
 fn repo(args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_repo"))
+    Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(args)
         .env("ACTIT_INDEXER", "http://127.0.0.1:1")
         .output()

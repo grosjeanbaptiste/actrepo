@@ -1,4 +1,4 @@
-//! `repo deploy ENV TARGET [PATH]` (port of dotfiles `project deploy`).
+//! `actrepo deploy ENV TARGET [PATH]` (port of dotfiles `project deploy`).
 pub mod asc;
 pub mod brew;
 pub mod command;

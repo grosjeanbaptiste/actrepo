@@ -9,7 +9,7 @@ fn ok<T, E: std::fmt::Display>(r: Result<T, E>) -> T {
 }
 
 fn repo(state: &Path, cwd: &Path, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_repo"))
+    Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(args)
         .env("DOTFILES_STATE_ROOT", state)
         .env("HOME", state)
@@ -146,11 +146,11 @@ fn worktree_list_text_is_one_line_per_worktree() {
 
 #[test]
 fn the_library_exposes_the_registry() {
-    let entries = ok(repo::registry::file::parse("a|/x\n"));
+    let entries = ok(actrepo::registry::file::parse("a|/x\n"));
     assert_eq!(entries[0].name, "a");
 }
 
-/// `repo worktree list --owners` with `actsessions` replaced by a script printing `answer`.
+/// `actrepo worktree list --owners` with `actsessions` replaced by a script printing `answer`.
 fn owners_run(f: &Fx, answer: &str, extra: &[&str]) -> Output {
     let bin = f.alpha.with_file_name("bin");
     ok(fs::create_dir_all(&bin));
@@ -167,7 +167,7 @@ fn owners_run(f: &Fx, answer: &str, extra: &[&str]) -> Output {
     );
     let mut args = vec!["worktree", "list", "--owners"];
     args.extend_from_slice(extra);
-    Command::new(env!("CARGO_BIN_EXE_repo"))
+    Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(args)
         .env("PATH", path)
         .current_dir(&f.alpha)

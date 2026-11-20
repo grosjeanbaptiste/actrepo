@@ -1,10 +1,10 @@
-//! `repo completions zsh|bash`: the shell side of `repo __complete`, with an fzf search when fzf is installed.
+//! `actrepo completions zsh|bash`: the shell side of `actrepo __complete`, with an fzf search when fzf is installed.
 use anyhow::{Result, bail};
 
 const ZSH: &str = r#"#compdef repo
 _repo() {
   local out
-  out=$(repo __complete "${(@)words[2,CURRENT]}" 2>/dev/null) || { _message "repo __complete failed: run it by hand for the reason"; return 1; }
+  out=$(actrepo __complete "${(@)words[2,CURRENT]}" 2>/dev/null) || { _message "actrepo __complete failed: run it by hand for the reason"; return 1; }
   local -a lines ids disp
   lines=("${(@f)out}")
   [[ -n "$out" ]] || return 1
@@ -23,7 +23,7 @@ compdef _repo repo
 
 const BASH: &str = r#"_repo() {
   local out line
-  out=$(repo __complete "${COMP_WORDS[@]:1:COMP_CWORD}" 2>/dev/null) || { echo "repo __complete failed: run it by hand for the reason" >&2; return 1; }
+  out=$(actrepo __complete "${COMP_WORDS[@]:1:COMP_CWORD}" 2>/dev/null) || { echo "actrepo __complete failed: run it by hand for the reason" >&2; return 1; }
   [ -n "$out" ] || return 1
   if [ "$(printf '%s\n' "$out" | wc -l)" -gt 1 ] && command -v fzf > /dev/null && [ -t 1 ]; then
     out=$(printf '%s\n' "$out" | fzf --height=40% --reverse --prompt='repo> ') || return 1
@@ -51,7 +51,7 @@ mod tests {
         for shell in ["zsh", "bash"] {
             let s = script(shell).unwrap_or_else(|e| panic!("{e}"));
             assert!(
-                s.contains("repo __complete") && s.contains("fzf"),
+                s.contains("actrepo __complete") && s.contains("fzf"),
                 "{shell}"
             );
         }
@@ -61,7 +61,7 @@ mod tests {
     fn a_failing_complete_is_reported_not_swallowed() {
         for shell in ["zsh", "bash"] {
             let s = script(shell).unwrap_or_else(|e| panic!("{e}"));
-            assert!(s.contains("repo __complete failed"), "{shell}");
+            assert!(s.contains("actrepo __complete failed"), "{shell}");
         }
     }
 

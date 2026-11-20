@@ -8,7 +8,7 @@ fn row(rel: &str, branch: &str, remote: &str, state: State) -> Row {
 #[test]
 fn the_table_has_a_header_a_rule_and_one_line_per_repository() {
     let rows = [row(".", "main", "git@x:a.git", State::UpToDate), row("sub/inner", "dev", "(no origin)", State::Ahead(2))];
-    let want = "==> repo push\n    scan root : /r\n    repos     : 2 found\n\n\
+    let want = "==> actrepo push\n    scan root : /r\n    repos     : 2 found\n\n\
         \x20   PATH       STATE         BRANCH          REMOTE\n\
         \x20   ---------  ------------  --------------  ------\n\
         \x20   .          up-to-date    main            git@x:a.git\n\
