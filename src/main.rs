@@ -329,7 +329,7 @@ enum WsCmd {
     },
 }
 
-pub fn main() -> Result<()> {
+fn main() -> Result<()> {
     match Cli::parse().cmd {
         Cmd::Pr { sub } => match sub {
             PrCmd::Create { base, title, body } => {

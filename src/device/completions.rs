@@ -1,7 +1,7 @@
 //! `actrepo completions zsh|bash`: the shell side of `actrepo __complete`, with an fzf search when fzf is installed.
 use anyhow::{Result, bail};
 
-const ZSH: &str = r#"#compdef actrepo repo
+const ZSH: &str = r#"#compdef actrepo
 _repo() {
   local out
   out=$(actrepo __complete "${(@)words[2,CURRENT]}" 2>/dev/null) || { _message "actrepo __complete failed: run it by hand for the reason"; return 1; }
@@ -18,7 +18,7 @@ _repo() {
   disp=(${lines//$'\t'/  })
   compadd -l -d disp -a ids
 }
-compdef _repo actrepo repo
+compdef _repo actrepo
 "#;
 
 const BASH: &str = r#"_repo() {
@@ -31,7 +31,7 @@ const BASH: &str = r#"_repo() {
   COMPREPLY=()
   while IFS= read -r line; do COMPREPLY+=("${line%%$'\t'*}"); done <<< "$out"
 }
-complete -F _repo actrepo repo
+complete -F _repo actrepo
 "#;
 
 pub fn script(shell: &str) -> Result<&'static str> {
@@ -47,15 +47,14 @@ mod tests {
     use super::*;
 
     #[test]
-    fn each_shell_registers_actrepo_and_the_repo_alias() {
-        for (shell, forms) in [
-            ("zsh", ["compdef _repo actrepo repo"]),
-            ("bash", ["complete -F _repo actrepo repo"]),
+    fn each_shell_registers_actrepo_only() {
+        for (shell, form) in [
+            ("zsh", "compdef _repo actrepo\n"),
+            ("bash", "complete -F _repo actrepo\n"),
         ] {
             let s = script(shell).unwrap_or_else(|e| panic!("{e}"));
-            for form in forms {
-                assert!(s.contains(form), "{shell}: {form}");
-            }
+            assert!(s.contains(form), "{shell}: {form}");
+            assert!(!s.contains("actrepo repo"), "{shell} still registers repo");
         }
     }
 
