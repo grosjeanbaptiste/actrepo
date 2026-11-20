@@ -128,7 +128,7 @@ fn a_markdown_project_declared_in_actmake_toml_builds_through_pandoc_then_the_br
         ));
         ok(fs::set_permissions(&p, fs::Permissions::from_mode(0o755)));
     }
-    let o = ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+    let o = ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(["doc", "build"])
         .env("DOTFILES_STATE_ROOT", f.base.join("state"))
         .env("STAGE", &f.base)
