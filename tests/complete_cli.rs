@@ -106,3 +106,34 @@ fn an_unknown_device_fails_and_lists_the_available_ones() {
     assert!(String::from_utf8_lossy(&o.stderr).contains("Pixel 7 (R59X)"));
     assert!(!f.base.join("calls.log").exists());
 }
+
+#[test]
+fn a_project_that_is_not_an_app_is_refused_for_run_naming_its_kind() {
+    let f = fx();
+    ok(fs::create_dir_all(f.base.join("lib")));
+    ok(fs::write(f.base.join("lib/Cargo.toml"), "[package]\n"));
+    let mut text = ok(fs::read_to_string(f.base.join("state/projects.txt")));
+    text.push_str(&format!("lib|{}\n", f.base.join("lib").display()));
+    ok(fs::write(f.base.join("state/projects.txt"), text));
+    let o = repo(&f, &["lib", "run", "R59X"]);
+    assert!(!o.status.success());
+    let e = String::from_utf8_lossy(&o.stderr).into_owned();
+    assert!(
+        e.contains("lib is a Package project: it does not run on a device"),
+        "{e}"
+    );
+    assert!(!f.base.join("calls.log").exists());
+}
+
+#[test]
+fn a_folder_of_no_known_kind_is_refused_for_run_not_guessed() {
+    let f = fx();
+    ok(fs::create_dir_all(f.base.join("blank")));
+    let mut text = ok(fs::read_to_string(f.base.join("state/projects.txt")));
+    text.push_str(&format!("blank|{}\n", f.base.join("blank").display()));
+    ok(fs::write(f.base.join("state/projects.txt"), text));
+    let o = repo(&f, &["blank", "run", "R59X"]);
+    assert!(!o.status.success());
+    let e = String::from_utf8_lossy(&o.stderr).into_owned();
+    assert!(e.contains("cannot tell what kind of project"), "{e}");
+}

@@ -12,8 +12,8 @@ dependencies = [
 
 [[package]]
 name = "actdevice"
-version = "0.1.0"
-source = "git+ssh://git@github.com/grosjeanbaptiste/actdevice.git?rev=d5a6da90b2c817809dc1c19a1e38f4a464b03d47#d5a6da90b2c817809dc1c19a1e38f4a464b03d47"
+version = "0.2.0"
+source = "git+ssh://git@github.com/grosjeanbaptiste/actdevice.git?rev=f1cd0d3ebd116762f1eede169c193eba5d7ea5b2#f1cd0d3ebd116762f1eede169c193eba5d7ea5b2"
 dependencies = [
  "serde_json",
 ]
