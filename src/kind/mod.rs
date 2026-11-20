@@ -17,6 +17,10 @@ pub enum Kind {
     /// Cargo crate without axum, Dart package, npm package.
     Package,
     Tex,
+    /// A page printed to PDF, declared by `actmake.toml`.
+    Html,
+    /// Markdown printed to PDF, declared by `actmake.toml`.
+    Markdown,
 }
 
 impl Kind {
@@ -24,6 +28,8 @@ impl Kind {
     pub fn engine(self) -> Option<Engine> {
         match self {
             Kind::Tex => Some(Engine::Tex),
+            Kind::Html => Some(Engine::Html),
+            Kind::Markdown => Some(Engine::Markdown),
             Kind::Flutter | Kind::Hook | Kind::Dioxus | Kind::Api | Kind::Package => None,
         }
     }
@@ -35,6 +41,8 @@ pub enum KindError {
     Unknown(String),
     /// The folder cannot be read.
     Unreadable(String),
+    /// `actmake.toml` names no engine, or one that does not exist.
+    BadConfig(String),
 }
 
 impl fmt::Display for KindError {
@@ -42,13 +50,15 @@ impl fmt::Display for KindError {
         match self {
             KindError::Unknown(dir) => write!(f, "cannot tell what kind of project {dir} is"),
             KindError::Unreadable(why) => write!(f, "cannot read the project folder: {why}"),
+            KindError::BadConfig(why) => write!(f, "invalid actmake.toml: {why}"),
         }
     }
 }
 
 impl std::error::Error for KindError {}
 
-/// The kind of project in `dir`, by marker files, first match wins: Flutter, device hook,
+/// The kind of project in `dir`: `actmake.toml` when present (the owner's word), else marker
+/// files, first match wins: Flutter, device hook,
 /// Dioxus, axum API, LaTeX, then any other package.
 pub fn detect(dir: &Path) -> Result<Kind, KindError> {
     let entries =
@@ -57,6 +67,9 @@ pub fn detect(dir: &Path) -> Result<Kind, KindError> {
         .filter_map(Result::ok)
         .any(|e| e.path().extension().is_some_and(|x| x == "tex"));
     let text = |name: &str| fs::read_to_string(dir.join(name)).ok();
+    if let Some(config) = text("actmake.toml") {
+        return declared(&config);
+    }
     let pubspec = text("pubspec.yaml");
     if pubspec.as_deref().is_some_and(|s| s.contains("flutter")) {
         return Ok(Kind::Flutter);
@@ -79,6 +92,24 @@ pub fn detect(dir: &Path) -> Result<Kind, KindError> {
         return Ok(Kind::Package);
     }
     Err(KindError::Unknown(dir.display().to_string()))
+}
+
+/// The kind an `actmake.toml` declares with `engine = "tex" | "html" | "markdown"`.
+fn declared(config: &str) -> Result<Kind, KindError> {
+    let value = config
+        .lines()
+        .filter_map(|l| l.split_once('='))
+        .find(|(k, _)| k.trim() == "engine")
+        .map(|(_, v)| v.trim().trim_matches(|c| c == '"' || c == '\''));
+    match value {
+        Some("tex") => Ok(Kind::Tex),
+        Some("html") => Ok(Kind::Html),
+        Some("markdown") => Ok(Kind::Markdown),
+        Some(other) => Err(KindError::BadConfig(format!(
+            "unknown engine {other:?}: use tex, html or markdown"
+        ))),
+        None => Err(KindError::BadConfig("no `engine = ...` line".into())),
+    }
 }
 
 #[cfg(test)]
