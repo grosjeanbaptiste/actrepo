@@ -31,9 +31,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "actmake"
+version = "0.1.0"
+source = "git+ssh://git@github.com/grosjeanbaptiste/actmake.git?rev=4356aaddc9b9651cfb87065e586aa885ad4c214c#4356aaddc9b9651cfb87065e586aa885ad4c214c"
+dependencies = [
+ "acttex",
+]
+
+[[package]]
 name = "actname"
 version = "0.1.0"
 source = "git+ssh://git@github.com/grosjeanbaptiste/Actname.git?rev=dfc9f80b91b2e4df1c6bd3a077385df765cd43cf#dfc9f80b91b2e4df1c6bd3a077385df765cd43cf"
+
+[[package]]
+name = "acttex"
+version = "0.1.0"
+source = "git+ssh://git@github.com/grosjeanbaptiste/acttex.git?rev=c7532f3d9c54c488d9ae2b60ecfb30233e959bff#c7532f3d9c54c488d9ae2b60ecfb30233e959bff"
 
 [[package]]
 name = "adler2"
@@ -501,6 +514,7 @@ dependencies = [
  "actautoma",
  "actdevice",
  "actit",
+ "actmake",
  "actname",
  "anyhow",
  "clap",

@@ -7,8 +7,9 @@ use clap::{Parser, Subcommand};
 use naming::Query;
 use pipeline::{Dotfiles, NewOpts, Source};
 use repo::{
-    audit, branch, delegate, deploy, device, doctor, install, license, naming, need, orchestrate,
-    pipeline, pr, push, registry, release, rename, root, run, scaffold, workspace, worktree,
+    audit, branch, build, delegate, deploy, device, doctor, install, license, naming, need,
+    orchestrate, pipeline, pr, push, registry, release, rename, root, run, scaffold, workspace,
+    worktree,
 };
 use scaffold::apply::Mode;
 use scaffold::command;
@@ -400,6 +401,7 @@ fn main() -> Result<()> {
         Cmd::Other(args) if device::request::is_device_request(&args) => {
             device::command::command(&args)
         }
+        Cmd::Other(args) if build::is_build_request(&args) => build::command(&args),
         Cmd::Other(args) => delegate::project(&args),
         Cmd::RenameBranch {
             path,

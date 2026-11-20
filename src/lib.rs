@@ -2,6 +2,7 @@
 pub mod actinstall;
 pub mod audit;
 pub mod branch;
+pub mod build;
 pub mod delegate;
 pub mod deploy;
 pub mod device;
@@ -9,6 +10,7 @@ pub mod doctor;
 #[cfg(test)]
 pub mod fakes;
 pub mod install;
+pub mod kind;
 pub mod license;
 pub mod naming;
 pub mod need;
