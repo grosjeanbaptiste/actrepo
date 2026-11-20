@@ -119,7 +119,7 @@ fn a_project_that_is_not_an_app_is_refused_for_run_naming_its_kind() {
     assert!(!o.status.success());
     let e = String::from_utf8_lossy(&o.stderr).into_owned();
     assert!(
-        e.contains("lib is a Package project: it does not run on a device"),
+        e.contains("lib is a Crate project: it does not run on a device"),
         "{e}"
     );
     assert!(!f.base.join("calls.log").exists());

@@ -33,3 +33,19 @@ fn a_second_file_or_an_unknown_flag_is_refused() {
     assert!(parse(&words("thesis build --fast")).is_err());
     assert!(parse(&words("thesis")).is_err());
 }
+
+#[test]
+fn release_and_target_are_read() {
+    let r = parse(&words("app build --release --target apk")).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(
+        (r.opts.release, r.opts.target.as_deref()),
+        (true, Some("apk"))
+    );
+    let r = parse(&words("app build")).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!((r.opts.release, r.opts.target), (false, None));
+}
+
+#[test]
+fn a_target_needs_a_value() {
+    assert!(parse(&words("app build --target")).is_err());
+}

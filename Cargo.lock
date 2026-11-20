@@ -33,7 +33,7 @@ dependencies = [
 [[package]]
 name = "actmake"
 version = "0.1.0"
-source = "git+ssh://git@github.com/grosjeanbaptiste/actmake.git?rev=fde46e0d563861119819071bc0402d9335971ea7#fde46e0d563861119819071bc0402d9335971ea7"
+source = "git+ssh://git@github.com/grosjeanbaptiste/actmake.git?rev=52fd2db6029a8a28186c0a8f095e5c456427de81#52fd2db6029a8a28186c0a8f095e5c456427de81"
 dependencies = [
  "acttex",
 ]
