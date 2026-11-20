@@ -1,4 +1,4 @@
-//! `repo __complete`, `repo completions` and `repo <dir> run|install` end to end: a real registry, scripted `adb`, `xcrun` and `flutter`.
+//! `actrepo __complete`, `actrepo completions` and `repo <dir> run|install` end to end: a real registry, scripted `adb`, `xcrun` and `flutter`.
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -45,7 +45,7 @@ fn fx() -> Fx {
 }
 
 fn repo(f: &Fx, args: &[&str]) -> Output {
-    ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+    ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(args)
         .env("DOTFILES_STATE_ROOT", f.base.join("state"))
         .env("STAGE", &f.base)
@@ -76,7 +76,7 @@ fn completions_zsh_calls_complete_and_uses_fzf_when_present() {
     assert!(o.status.success());
     let s = out(&o);
     assert!(
-        s.contains("repo __complete") && s.contains("fzf") && s.contains("compdef"),
+        s.contains("actrepo __complete") && s.contains("fzf") && s.contains("compdef"),
         "{s}"
     );
 }

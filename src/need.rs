@@ -1,4 +1,4 @@
-//! `repo new --need`: ask actit whether a tool already covers the need before creating a
+//! `actrepo new --need`: ask actit whether a tool already covers the need before creating a
 //! repository. Only a tool whose licence allows reuse stops the creation.
 use actit::cli::Outcome;
 use anyhow::{Result, anyhow, bail};

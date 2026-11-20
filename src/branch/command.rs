@@ -1,4 +1,4 @@
-//! `repo rename-branch`: wired to the real `git` and, through actautoma, the hosting platform.
+//! `actrepo rename-branch`: wired to the real `git` and, through actautoma, the hosting platform.
 use super::plan::Opts;
 use super::rename::rename;
 use crate::scaffold::native::Process;

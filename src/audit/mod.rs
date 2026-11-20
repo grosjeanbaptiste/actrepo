@@ -1,4 +1,4 @@
-//! `repo audit [path]` (port of dotfiles `project audit`): env vars a project references.
+//! `actrepo audit [path]` (port of dotfiles `project audit`): env vars a project references.
 pub mod command;
 pub mod diag;
 pub mod parse;

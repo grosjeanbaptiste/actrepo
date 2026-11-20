@@ -1,4 +1,4 @@
-//! `repo rename` end to end in a temp HOME, `--local-only` so no platform call is made.
+//! `actrepo rename` end to end in a temp HOME, `--local-only` so no platform call is made.
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -48,7 +48,7 @@ impl World {
         self.home.path().join(p)
     }
     fn repo(&self, args: &[&str]) -> Output {
-        let mut c = Command::new(env!("CARGO_BIN_EXE_repo"));
+        let mut c = Command::new(env!("CARGO_BIN_EXE_actrepo"));
         c.args(args)
             .env("HOME", self.home.path())
             .env("DOTFILES_STATE_ROOT", self.path("machine"))

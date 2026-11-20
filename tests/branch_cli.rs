@@ -1,4 +1,4 @@
-//! `repo rename-branch` end to end on temp git repositories without a remote. No network.
+//! `actrepo rename-branch` end to end on temp git repositories without a remote. No network.
 use std::fs;
 use std::path::Path;
 use std::process::{Command, Output};
@@ -39,7 +39,7 @@ fn repo_on_master() -> tempfile::TempDir {
 }
 
 fn rename(dir: &Path, extra: &[&str]) -> Output {
-    ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+    ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .arg("rename-branch")
         .arg(dir)
         .args(extra)

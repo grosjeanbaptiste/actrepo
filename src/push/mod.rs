@@ -1,4 +1,4 @@
-//! `repo push`: push a repository and every repository nested under it.
+//! `actrepo push`: push a repository and every repository nested under it.
 pub mod confirm;
 pub mod report;
 pub mod rows;

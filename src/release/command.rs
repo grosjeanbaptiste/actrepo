@@ -1,4 +1,4 @@
-//! `repo release`: the real audit, the machine profile of the state root, and `exec`.
+//! `actrepo release`: the real audit, the machine profile of the state root, and `exec`.
 use super::args::{Opts, Parsed, parse};
 use super::launch::Launch;
 use super::{Ports, run};
@@ -9,7 +9,7 @@ use std::os::unix::process::CommandExt;
 use std::process::Command;
 
 const USAGE: &str = "Usage:
-  repo release [--require-audit] [--path DIR] [--script PATH] [args...]
+  actrepo release [--require-audit] [--path DIR] [--script PATH] [args...]
 
 Runs the project's release script with the machine profile
 ($DOTFILES_STATE_ROOT/shell/profile.sh) and the project's .envrc loaded into
@@ -22,7 +22,7 @@ Conventions (looked up in order, in DIR):
   stores/scripts/tf_release.py    iOS TestFlight (mobile template)
 
 Options:
-  --require-audit   Run `repo audit` first; abort if a variable is missing or a check FAILs.
+  --require-audit   Run `actrepo audit` first; abort if a variable is missing or a check FAILs.
   --path DIR        Use DIR instead of the current directory.
   --script PATH     Override the script location.
 ";

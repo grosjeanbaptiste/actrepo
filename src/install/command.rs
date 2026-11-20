@@ -1,4 +1,4 @@
-//! `repo install`: the registry, real `git`, and the real heavy queue with cargo's output on the terminal.
+//! `actrepo install`: the registry, real `git`, and the real heavy queue with cargo's output on the terminal.
 use super::{Opts, run};
 use crate::registry::file::{path, read};
 use crate::scaffold::native::Quiet;

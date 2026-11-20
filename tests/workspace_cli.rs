@@ -1,4 +1,4 @@
-//! `repo workspace` end to end: temp workspaces, real git, a temp template tree. No network.
+//! `actrepo workspace` end to end: temp workspaces, real git, a temp template tree. No network.
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
@@ -50,7 +50,7 @@ impl Fx {
         self.repo_in(&self.dir, args)
     }
     fn repo_in(&self, cwd: &Path, args: &[&str]) -> Output {
-        ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+        ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
             .arg("workspace")
             .args(args)
             .current_dir(cwd)
@@ -86,7 +86,7 @@ fn list_finds_the_workspace_from_a_subdirectory() {
 #[test]
 fn no_workspace_fails_with_exit_1_and_the_hint() {
     let d = ok(tempfile::tempdir());
-    let o = ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+    let o = ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(["workspace", "list"])
         .current_dir(d.path())
         .env_remove("DOTFILES_WORKSPACE_FILE")
@@ -104,7 +104,7 @@ fn no_workspace_fails_with_exit_1_and_the_hint() {
 fn the_env_variable_names_the_workspace() {
     let f = fx(r#"{"folders":[{"path":"x"}]}"#);
     let elsewhere = ok(tempfile::tempdir());
-    let o = ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+    let o = ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(["workspace", "list"])
         .current_dir(elsewhere.path())
         .env("DOTFILES_WORKSPACE_FILE", f.dir.join("w.code-workspace"))
@@ -234,7 +234,7 @@ fn a_missing_git_fails_loudly_for_status_and_push() {
     let empty = f.dir.join("emptybin");
     ok(fs::create_dir(&empty));
     for sub in ["status", "push"] {
-        let o = ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+        let o = ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
             .args(["workspace", sub])
             .current_dir(&f.dir)
             .env("PATH", &empty)

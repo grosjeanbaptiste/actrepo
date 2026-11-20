@@ -1,4 +1,4 @@
-//! Ask for the project type on stdin when `repo new` got none
+//! Ask for the project type on stdin when `actrepo new` got none
 //! (the line-prompt path of `dotfiles project setup`; no fzf).
 use anyhow::{Context, Result, bail};
 use std::io::{BufRead, Write};

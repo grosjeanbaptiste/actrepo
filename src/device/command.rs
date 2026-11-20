@@ -23,7 +23,7 @@ pub fn command(args: &[String]) -> Result<()> {
     .with_context(|| format!("{} on {device}", req.name))
 }
 
-/// `repo __complete WORDS…`: one candidate per line.
+/// `actrepo __complete WORDS…`: one candidate per line.
 pub fn complete(words: &[String]) -> Result<()> {
     let entries = read(&path(|k| std::env::var(k).ok())?)?;
     let devices = || -> Result<Vec<String>> {

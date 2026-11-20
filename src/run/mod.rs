@@ -1,4 +1,4 @@
-//! `repo run NAME-OR-DIR [VERB [ARGS...]]` (port of dotfiles `project <folder> <verb>`).
+//! `actrepo run NAME-OR-DIR [VERB [ARGS...]]` (port of dotfiles `project <folder> <verb>`).
 pub mod command;
 pub mod exec;
 #[cfg(test)]
@@ -18,12 +18,12 @@ pub(crate) fn resolve(name: &str, entries: &[Entry]) -> Result<PathBuf> {
     }
     let Some(path) = find(entries, name) else {
         bail!(
-            "Unknown project: {name}\nRun `repo list` to see registered projects, or `repo scan` to refresh it."
+            "Unknown project: {name}\nRun `actrepo list` to see registered projects, or `actrepo scan` to refresh it."
         );
     };
     if !path.is_dir() {
         bail!(
-            "Registered path for '{name}' no longer exists: {}\nRun `repo scan` to refresh the registry.",
+            "Registered path for '{name}' no longer exists: {}\nRun `actrepo scan` to refresh the registry.",
             path.display()
         );
     }

@@ -1,4 +1,4 @@
-//! What `repo rename` will change, decided before anything is touched.
+//! What `actrepo rename` will change, decided before anything is touched.
 use crate::registry::file::{Entry, find};
 use actautoma::rename::Plan;
 use anyhow::{Result, bail};

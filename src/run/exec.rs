@@ -31,7 +31,7 @@ fn delegate(dir: &Path, verb: &str, args: &[String], runner: &dyn Runner) -> Res
     finish(runner.run("dotfiles", &all, None)?)
 }
 
-/// `publish ENV STORE [OPTIONS]`: the project's TestFlight script when it has one, else `repo deploy`.
+/// `publish ENV STORE [OPTIONS]`: the project's TestFlight script when it has one, else `actrepo deploy`.
 fn publish(
     dir: &Path,
     args: &[String],
@@ -87,7 +87,7 @@ fn universal(
         if args.len() < 2 {
             return usage(
                 err,
-                format!("Usage: repo run {shown} publish <prod|test> <store> [options]"),
+                format!("Usage: actrepo run {shown} publish <prod|test> <store> [options]"),
             )
             .map(Some);
         }
@@ -101,7 +101,7 @@ fn universal(
         bail!("device hook {} is not executable", p.display());
     }
     if args.len() != 1 {
-        return usage(err, format!("Usage: repo run {shown} install <device>")).map(Some);
+        return usage(err, format!("Usage: actrepo run {shown} install <device>")).map(Some);
     }
     delegate(dir, verb, args, runner).map(Some)
 }

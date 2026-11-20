@@ -1,4 +1,4 @@
-//! `repo doctor` end to end: a real git repository, a scripted `gh`, a controlled environment.
+//! `actrepo doctor` end to end: a real git repository, a scripted `gh`, a controlled environment.
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -69,7 +69,7 @@ impl Fx {
             .map(|p| p.join("state"))
             .unwrap_or_default();
         let path = format!("{}:/usr/bin:/bin", self.bin.display());
-        ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+        ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
             .arg("doctor")
             .arg(arg)
             .env_clear()

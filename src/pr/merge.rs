@@ -1,4 +1,4 @@
-//! `repo pr merge [N] [--yes]` (port of dotfiles `project pr merge`).
+//! `actrepo pr merge [N] [--yes]` (port of dotfiles `project pr merge`).
 use super::after;
 use crate::scaffold::setup::Exec;
 use actautoma::forge::{Forge, Mergeable};

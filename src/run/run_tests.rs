@@ -54,14 +54,14 @@ fn a_registered_name_resolves_and_a_directory_wins_over_a_name() {
 fn an_unknown_name_says_how_to_list_the_projects() {
     let e = go("zz", None, &[], &[], &Fake::exiting(0)).0.err().map(|e| e.to_string());
     let e = e.unwrap_or_default();
-    assert!(e.starts_with("Unknown project: zz") && e.contains("repo list") && e.contains("repo scan"), "{e}");
+    assert!(e.starts_with("Unknown project: zz") && e.contains("actrepo list") && e.contains("actrepo scan"), "{e}");
 }
 
 #[test]
 fn a_registered_path_that_is_gone_says_so() {
     let e = go("p", None, &[], &[entry("p", Path::new("/nonexistent/p"))], &Fake::exiting(0)).0.err().map(|e| e.to_string());
     let e = e.unwrap_or_default();
-    assert!(e.contains("'p' no longer exists: /nonexistent/p") && e.contains("repo scan"), "{e}");
+    assert!(e.contains("'p' no longer exists: /nonexistent/p") && e.contains("actrepo scan"), "{e}");
 }
 
 #[test]

@@ -2,15 +2,15 @@
 
 use actautoma::{gh::Gh, process::ProcessRunner};
 use actit::forge_names::ForgeNames;
-use anyhow::{Context, Result};
-use clap::{Parser, Subcommand};
-use naming::Query;
-use pipeline::{Dotfiles, NewOpts, Source};
-use repo::{
+use actrepo::{
     audit, branch, build, delegate, deploy, device, doctor, install, license, naming, need,
     orchestrate, pipeline, pr, push, registry, release, rename, root, run, scaffold, workspace,
     worktree,
 };
+use anyhow::{Context, Result};
+use clap::{Parser, Subcommand};
+use naming::Query;
+use pipeline::{Dotfiles, NewOpts, Source};
 use scaffold::apply::Mode;
 use scaffold::command;
 use scaffold::native::{Native, Process, Quiet};
@@ -172,7 +172,7 @@ enum Cmd {
         #[arg(long)]
         force: bool,
     },
-    /// Run the project's release script with the machine profile and `.envrc` loaded (see `repo release help`).
+    /// Run the project's release script with the machine profile and `.envrc` loaded (see `actrepo release help`).
     #[command(disable_help_flag = true)]
     Release {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
@@ -218,22 +218,22 @@ enum Cmd {
         #[command(subcommand)]
         sub: WtCmd,
     },
-    /// Run actit in-process: `repo actit "<need>"`, `repo actit --name N [--owner O] [--contains]`.
+    /// Run actit in-process: `actrepo actit "<need>"`, `actrepo actit --name N [--owner O] [--contains]`.
     Actit {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
-    /// Run actname in-process: `repo actname generate --prefix act --domain "<words>"`.
+    /// Run actname in-process: `actrepo actname generate --prefix act --domain "<words>"`.
     Actname {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
-    /// Run actautoma in-process: `repo actautoma rename-repo OWNER/OLD NEW [--dir D] [--dry-run]`.
+    /// Run actautoma in-process: `actrepo actautoma rename-repo OWNER/OLD NEW [--dir D] [--dry-run]`.
     Actautoma {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
-    /// Candidates for the shell completion (used by `repo completions`).
+    /// Candidates for the shell completion (used by `actrepo completions`).
     #[command(
         name = "__complete",
         hide = true,
@@ -241,7 +241,7 @@ enum Cmd {
         allow_hyphen_values = true
     )]
     Complete { words: Vec<String> },
-    /// Print the zsh or bash completion script: `eval "$(repo completions zsh)"`.
+    /// Print the zsh or bash completion script: `eval "$(actrepo completions zsh)"`.
     Completions { shell: String },
     /// `repo <dir> run|install [DEVICE] [--release]` runs or installs the app of <dir> on a device;
     /// any other command goes to `dotfiles project` (list, status, pr, doctor, …).

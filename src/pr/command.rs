@@ -1,4 +1,4 @@
-//! The real ports of `repo pr`: the platform (through actautoma) and git on the process, stdin/stdout, the clock.
+//! The real ports of `actrepo pr`: the platform (through actautoma) and git on the process, stdin/stdout, the clock.
 use super::{create, merge};
 use crate::scaffold::native::{Process, Quiet};
 use actautoma::{gh::Gh, process::ProcessRunner};

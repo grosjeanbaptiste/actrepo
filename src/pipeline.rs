@@ -1,4 +1,4 @@
-//! `repo new`: choose a free name, then scaffold. Both seams are injected so the
+//! `actrepo new`: choose a free name, then scaffold. Both seams are injected so the
 //! whole pipeline is testable: GitHub (`RepoNames`) and `dotfiles` (`Scaffold`).
 use crate::naming::{self, Query};
 use actit::ports::RepoNames;

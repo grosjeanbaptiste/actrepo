@@ -1,4 +1,4 @@
-//! `repo install` end to end: a real registry and git repository, scripted `dotfiles` and `cargo`.
+//! `actrepo install` end to end: a real registry and git repository, scripted `dotfiles` and `cargo`.
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -81,7 +81,7 @@ fn fx() -> Fx {
 impl Fx {
     fn install(&self, args: &[&str], extra: &[(&str, &str)]) -> Output {
         let path = format!("{}:/usr/bin:/bin", self.base.join("bin").display());
-        ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+        ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
             .arg("install")
             .args(args)
             .env_clear()

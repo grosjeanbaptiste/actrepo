@@ -1,4 +1,4 @@
-//! `repo install NAME` (port of dotfiles `project install`): install a registered Cargo project on PATH.
+//! `actrepo install NAME` (port of dotfiles `project install`): install a registered Cargo project on PATH.
 pub mod check;
 pub mod command;
 pub mod manifest;

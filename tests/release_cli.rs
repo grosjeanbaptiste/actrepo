@@ -1,4 +1,4 @@
-//! `repo release` end to end: a real bash sources a profile and an `.envrc`, then runs a scripted release script.
+//! `actrepo release` end to end: a real bash sources a profile and an `.envrc`, then runs a scripted release script.
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -61,7 +61,7 @@ fn fx() -> Fx {
 impl Fx {
     fn release(&self, args: &[&str]) -> Output {
         let path = format!("{}:/usr/bin:/bin", self.base.join("bin").display());
-        ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+        ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
             .arg("release")
             .args(args)
             .current_dir(self.base.join("cwd"))
@@ -197,7 +197,7 @@ fn help_prints_the_usage_and_exits_0() {
     let o = fx().release(&["--help"]);
     assert_eq!(o.status.code(), Some(0));
     assert!(
-        out(&o).starts_with("Usage:\n  repo release "),
+        out(&o).starts_with("Usage:\n  actrepo release "),
         "{}",
         out(&o)
     );

@@ -1,4 +1,4 @@
-//! `repo list|scan|status` end to end on a temp state root and temp repositories. No network.
+//! `actrepo list|scan|status` end to end on a temp state root and temp repositories. No network.
 use std::fs;
 use std::path::Path;
 use std::process::{Command, Output};
@@ -8,7 +8,7 @@ fn ok<T, E: std::fmt::Display>(r: Result<T, E>) -> T {
 }
 
 fn repo(state: &Path, home: &Path, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_repo"))
+    Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(args)
         .env("DOTFILES_STATE_ROOT", state)
         .env("HOME", home)
@@ -54,7 +54,7 @@ fn list_with_no_registry_says_how_to_create_it_and_succeeds() {
     assert!(o.status.success(), "{}", err(&o));
     assert_eq!(out(&o), "");
     assert!(
-        err(&o).contains("No projects registered yet. Run: repo scan"),
+        err(&o).contains("No projects registered yet. Run: actrepo scan"),
         "{}",
         err(&o)
     );
@@ -159,7 +159,7 @@ fn scan_reports_unreadable_directories_on_stderr_and_still_succeeds() {
 
 #[test]
 fn no_state_root_and_no_home_fails_by_name() {
-    let o = Command::new(env!("CARGO_BIN_EXE_repo"))
+    let o = Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .arg("list")
         .env_remove("DOTFILES_STATE_ROOT")
         .env_remove("HOME")

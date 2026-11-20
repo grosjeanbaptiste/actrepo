@@ -1,4 +1,4 @@
-//! `repo worktree list`: the worktrees of the repository in `dir`, read from `git worktree list --porcelain`.
+//! `actrepo worktree list`: the worktrees of the repository in `dir`, read from `git worktree list --porcelain`.
 use crate::scaffold::setup::Exec;
 use anyhow::Result;
 use serde_json::{Value, json};

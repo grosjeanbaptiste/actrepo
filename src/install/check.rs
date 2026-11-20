@@ -1,4 +1,4 @@
-//! What a project must be before `repo install` compiles it: registered, Cargo, committed, clean.
+//! What a project must be before `actrepo install` compiles it: registered, Cargo, committed, clean.
 use crate::registry::file::Entry;
 use crate::registry::file::find;
 use crate::scaffold::setup::Exec;
@@ -16,7 +16,7 @@ fn readable(root: &Path, file: &str) -> Result<()> {
 /// The canonical path of project `name`, or why it cannot be installed.
 pub fn project(entries: &[Entry], name: &str, probe: &dyn Exec) -> Result<PathBuf> {
     let Some(path) = find(entries, name) else {
-        bail!("Unknown project: {name} (run repo list)");
+        bail!("Unknown project: {name} (run actrepo list)");
     };
     if !path.is_dir() {
         bail!("registered path is missing: {}", path.display());

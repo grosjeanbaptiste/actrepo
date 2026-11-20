@@ -15,7 +15,7 @@ fn run_with(args: &[&str], root: &Path, path: Option<&str>) -> Output {
 }
 
 fn run_env(args: &[&str], root: &Path, env: Option<(&str, &str)>) -> Output {
-    let mut cmd = Command::new(env!("CARGO_BIN_EXE_repo"));
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_actrepo"));
     cmd.args(args).args(["--no-push", "--root"]).arg(root);
     if let Some((key, value)) = env {
         cmd.env(key, value);
@@ -225,7 +225,7 @@ fn missing_dotfiles_fails_loudly_with_via_dotfiles() {
 #[test]
 #[ignore = "needs dotfiles"]
 fn an_unknown_command_is_forwarded_to_dotfiles_and_fails() {
-    let out = Command::new(env!("CARGO_BIN_EXE_repo"))
+    let out = Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .arg("definitely-not-a-command")
         .output()
         .unwrap_or_else(|e| panic!("{e}"));
@@ -273,7 +273,7 @@ fn a_missing_root_or_a_file_as_root_fails_loudly_and_creates_nothing() {
 fn a_relative_root_works() {
     let base = tmp();
     assert!(std::fs::create_dir(base.path().join("rel")).is_ok());
-    let out = Command::new(env!("CARGO_BIN_EXE_repo"))
+    let out = Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .current_dir(base.path())
         .args([
             "new",
@@ -295,7 +295,7 @@ fn a_relative_root_works() {
 fn two_simultaneous_runs_leave_exactly_one_clean_repository() {
     let root = tmp();
     let spawn = || {
-        Command::new(env!("CARGO_BIN_EXE_repo"))
+        Command::new(env!("CARGO_BIN_EXE_actrepo"))
             .args([
                 "new",
                 "package/rust",
@@ -361,7 +361,7 @@ fn being_offline_fails_loudly_and_creates_nothing() {
 #[test]
 #[ignore = "needs dotfiles"]
 fn a_dotfiles_project_command_that_succeeds_is_forwarded_with_its_output() {
-    let out = Command::new(env!("CARGO_BIN_EXE_repo"))
+    let out = Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .arg("list")
         .output()
         .unwrap_or_else(|e| panic!("{e}"));
@@ -374,7 +374,7 @@ fn the_project_type_can_be_piped_on_stdin() {
     use std::io::Write;
     use std::process::Stdio;
     let root = tmp();
-    let mut child = Command::new(env!("CARGO_BIN_EXE_repo"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(["new", "--name", "ifdck", "--no-push", "--root"])
         .arg(root.path())
         .stdin(Stdio::piped())

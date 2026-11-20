@@ -1,4 +1,4 @@
-//! `repo run`: the real registry, process and exit code.
+//! `actrepo run`: the real registry, process and exit code.
 use super::exec::{Outcome, Runner};
 use crate::registry::file::{path, read};
 use anyhow::{Context, Result, bail};
@@ -11,7 +11,7 @@ struct Inherit;
 
 impl Runner for Inherit {
     fn me(&self) -> String {
-        std::env::current_exe().map_or_else(|_| "repo".into(), |p| p.display().to_string()) // not found: rely on PATH
+        std::env::current_exe().map_or_else(|_| "actrepo".into(), |p| p.display().to_string()) // not found: rely on PATH
     }
 
     fn run(&self, prog: &str, args: &[String], cwd: Option<&Path>) -> Result<i32> {
