@@ -105,3 +105,53 @@ fn clean_removes_the_previous_pdf_and_builds_again() {
     let calls = ok(fs::read_to_string(f.base.join("calls.log")));
     assert_eq!(calls.lines().count(), 6, "{calls}");
 }
+
+#[test]
+fn a_markdown_project_declared_in_actmake_toml_builds_through_pandoc_then_the_browser() {
+    let f = fx();
+    let doc = f.base.join("doc");
+    ok(fs::create_dir_all(&doc));
+    ok(fs::write(
+        doc.join("actmake.toml"),
+        "engine = \"markdown\"\n",
+    ));
+    ok(fs::write(doc.join("guide.md"), "# T\n"));
+    let state = f.base.join("state/projects.txt");
+    let mut text = ok(fs::read_to_string(&state));
+    text.push_str(&format!("doc|{}\n", doc.display()));
+    ok(fs::write(&state, text));
+    for tool in ["pandoc", "chrome"] {
+        let p = f.base.join("bin").join(tool);
+        ok(fs::write(
+            &p,
+            format!("#!/bin/sh\necho \"{tool} $*\" >> \"$STAGE/calls.log\"\n"),
+        ));
+        ok(fs::set_permissions(&p, fs::Permissions::from_mode(0o755)));
+    }
+    let o = ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+        .args(["doc", "build"])
+        .env("DOTFILES_STATE_ROOT", f.base.join("state"))
+        .env("STAGE", &f.base)
+        .env("ACTMAKE_CHROME", f.base.join("bin/chrome"))
+        .env(
+            "PATH",
+            format!("{}:/usr/bin:/bin", f.base.join("bin").display()),
+        )
+        .output());
+    assert!(o.status.success(), "{}", err(&o));
+    let calls = ok(fs::read_to_string(f.base.join("calls.log")));
+    assert!(
+        calls
+            .lines()
+            .next()
+            .is_some_and(|l| l.starts_with("pandoc --standalone guide.md")),
+        "{calls}"
+    );
+    assert!(
+        calls
+            .lines()
+            .nth(1)
+            .is_some_and(|l| l.contains("--print-to-pdf=") && l.contains("guide.pdf")),
+        "{calls}"
+    );
+}

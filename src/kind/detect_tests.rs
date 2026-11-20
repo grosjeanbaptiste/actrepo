@@ -105,3 +105,55 @@ fn a_folder_that_cannot_be_read_is_an_error_not_unknown() {
     let missing = std::env::temp_dir().join("actrepo-kind-does-not-exist");
     assert!(matches!(detect(&missing), Err(KindError::Unreadable(_))));
 }
+
+#[test]
+fn actmake_toml_declares_a_document_and_beats_every_inference() {
+    let md = kind(
+        "doc-md",
+        &[
+            ("actmake.toml", "engine = \"markdown\"\n"),
+            ("package.json", "{}"),
+        ],
+    );
+    assert_eq!(md, Ok(Kind::Markdown));
+    assert_eq!(Kind::Markdown.engine(), Some(actmake::Engine::Markdown));
+    let html = kind(
+        "doc-html",
+        &[
+            ("actmake.toml", "# a page\nengine = 'html'\n"),
+            ("Cargo.toml", "axum"),
+        ],
+    );
+    assert_eq!(html, Ok(Kind::Html));
+    assert_eq!(Kind::Html.engine(), Some(actmake::Engine::Html));
+    assert_eq!(
+        kind("doc-tex", &[("actmake.toml", "engine = \"tex\"\n")]),
+        Ok(Kind::Tex)
+    );
+}
+
+#[test]
+fn an_unknown_engine_or_a_missing_key_is_an_error_not_a_guess() {
+    let bad = kind(
+        "doc-bad",
+        &[("actmake.toml", "engine = \"word\"\n"), ("main.tex", "")],
+    );
+    assert!(
+        matches!(&bad, Err(KindError::BadConfig(m)) if m.contains("word")),
+        "{bad:?}"
+    );
+    let none = kind(
+        "doc-none",
+        &[("actmake.toml", "# empty\n"), ("main.tex", "")],
+    );
+    assert!(
+        matches!(&none, Err(KindError::BadConfig(m)) if m.contains("engine")),
+        "{none:?}"
+    );
+}
+
+#[test]
+fn bad_config_is_reported_with_its_reason() {
+    let e = KindError::BadConfig("no engine".into()).to_string();
+    assert_eq!(e, "invalid actmake.toml: no engine");
+}
