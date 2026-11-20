@@ -4,8 +4,8 @@ use actautoma::{gh::Gh, process::ProcessRunner};
 use actit::forge_names::ForgeNames;
 use actrepo::{
     audit, branch, build, delegate, deploy, device, doctor, install, license, naming, need,
-    orchestrate, pipeline, pr, push, registry, release, rename, root, run, scaffold, workspace,
-    worktree,
+    orchestrate, pin, pipeline, pr, push, registry, release, rename, root, run, scaffold,
+    workspace, worktree,
 };
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
@@ -171,6 +171,13 @@ enum Cmd {
         /// Replace an existing binary from this project.
         #[arg(long)]
         force: bool,
+    },
+    /// Show where a git dependency is pinned across the workspace repos (fails when they differ), or pin them all to <rev>.
+    Pin {
+        /// Dependency name, as in Cargo.toml.
+        dep: String,
+        /// Full 40-character commit hash to pin every repo to.
+        rev: Option<String>,
     },
     /// Run the project's release script with the machine profile and `.envrc` loaded (see `actrepo release help`).
     #[command(disable_help_flag = true)]
@@ -362,6 +369,7 @@ pub fn main() -> Result<()> {
             bin,
             force,
         }),
+        Cmd::Pin { dep, rev } => pin::command::command(&dep, rev.as_deref()),
         Cmd::Release { args } => release::command::command(&args),
         Cmd::Deploy {
             env,
