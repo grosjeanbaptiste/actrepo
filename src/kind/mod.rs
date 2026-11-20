@@ -24,6 +24,17 @@ pub enum Kind {
 }
 
 impl Kind {
+    /// The actdevice tooling that runs this kind on a device; None for what is not an app.
+    pub fn device_tooling(self) -> Option<actdevice::project::Kind> {
+        use actdevice::project::Kind as Tooling;
+        match self {
+            Kind::Flutter => Some(Tooling::Flutter),
+            Kind::Hook => Some(Tooling::Hook),
+            Kind::Dioxus => Some(Tooling::Dioxus),
+            Kind::Api | Kind::Package | Kind::Tex | Kind::Html | Kind::Markdown => None,
+        }
+    }
+
     /// The actmake engine that builds this kind; None until one exists.
     pub fn engine(self) -> Option<Engine> {
         match self {

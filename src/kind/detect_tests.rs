@@ -157,3 +157,20 @@ fn bad_config_is_reported_with_its_reason() {
     let e = KindError::BadConfig("no engine".into()).to_string();
     assert_eq!(e, "invalid actmake.toml: no engine");
 }
+
+#[test]
+fn only_apps_run_on_a_device_and_each_names_its_tooling() {
+    use actdevice::project::Kind as Tooling;
+    assert_eq!(Kind::Flutter.device_tooling(), Some(Tooling::Flutter));
+    assert_eq!(Kind::Hook.device_tooling(), Some(Tooling::Hook));
+    assert_eq!(Kind::Dioxus.device_tooling(), Some(Tooling::Dioxus));
+    for k in [
+        Kind::Api,
+        Kind::Package,
+        Kind::Tex,
+        Kind::Html,
+        Kind::Markdown,
+    ] {
+        assert_eq!(k.device_tooling(), None, "{k:?}");
+    }
+}
