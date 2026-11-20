@@ -15,6 +15,7 @@ pub mod license;
 pub mod naming;
 pub mod need;
 pub mod orchestrate;
+pub mod pin;
 pub mod pipeline;
 pub mod pr;
 pub mod push;
