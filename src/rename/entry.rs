@@ -13,6 +13,22 @@ pub fn renamed(entries: &[Entry], old: &str, new: &str, path: &Path) -> Option<V
     Some(out)
 }
 
+/// Like [`renamed`], for a rename that failed part-way: the row follows the
+/// folder only once the old one is gone and the new one is there, so the
+/// registry says where the project really is, whatever step failed.
+pub fn reconciled(
+    entries: &[Entry],
+    old: &str,
+    new: &str,
+    new_dir: &Path,
+    exists: &dyn Fn(&Path) -> bool,
+) -> Option<Vec<Entry>> {
+    let old_dir = entries.iter().find(|e| e.name == old)?.path.clone();
+    (!exists(&old_dir) && exists(new_dir))
+        .then(|| renamed(entries, old, new, new_dir))
+        .flatten()
+}
+
 #[cfg(test)]
 mod tests {
     include!("entry_tests.rs");
