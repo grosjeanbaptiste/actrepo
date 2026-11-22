@@ -35,7 +35,7 @@ fn go(o: &Opts, entries: &[Entry], probe: &Fake, live: &Fake) -> (Result<()>, St
 }
 
 fn live() -> Fake {
-    Fake::new(&[]).answering("dotfiles heavy run -- cargo install", Ok(""))
+    Fake::new(&[]).answering("actqueue run -- cargo install", Ok(""))
 }
 
 #[test]
@@ -44,7 +44,7 @@ fn the_binary_is_installed_through_the_heavy_queue_and_confirmed() {
     let l = live();
     let (r, out) = go(&opts(None, Some("ss"), false), &entries, &probe(), &l);
     assert!(r.is_ok(), "{r:?}");
-    let want = format!("dotfiles heavy run -- cargo install --path {} --locked --bin ss", root.display());
+    let want = format!("actqueue run -- cargo install --path {} --locked --bin ss", root.display());
     assert_eq!(*l.calls.borrow(), [want]);
     assert_eq!(out, format!("Installed ss from {}\n", root.display()));
 }
@@ -54,7 +54,7 @@ fn without_bin_or_package_the_project_name_is_confirmed() {
     let (_d, root, entries) = fx();
     let l = live();
     let (_, out) = go(&opts(None, None, false), &entries, &probe(), &l);
-    assert_eq!(*l.calls.borrow(), [format!("dotfiles heavy run -- cargo install --path {} --locked", root.display())]);
+    assert_eq!(*l.calls.borrow(), [format!("actqueue run -- cargo install --path {} --locked", root.display())]);
     assert_eq!(out, format!("Installed ss from {}\n", root.display()));
 }
 
@@ -64,7 +64,7 @@ fn force_is_passed_after_bin() {
     let l = live();
     let (r, _) = go(&opts(None, Some("ss"), true), &entries, &probe(), &l);
     assert!(r.is_ok(), "{r:?}");
-    let want = format!("dotfiles heavy run -- cargo install --path {} --locked --bin ss --force", root.display());
+    let want = format!("actqueue run -- cargo install --path {} --locked --bin ss --force", root.display());
     assert_eq!(*l.calls.borrow(), [want]);
 }
 
@@ -80,7 +80,7 @@ fn a_package_is_installed_from_its_member_directory_and_named_in_the_confirmatio
     let l = live();
     let (r, out) = go(&opts(Some("ss-ui"), None, false), &entries, &p, &l);
     assert!(r.is_ok(), "{r:?}");
-    assert_eq!(*l.calls.borrow(), [format!("dotfiles heavy run -- cargo install --path {}/ui --locked", root.display())]);
+    assert_eq!(*l.calls.borrow(), [format!("actqueue run -- cargo install --path {}/ui --locked", root.display())]);
     assert_eq!(out, format!("Installed ss-ui from {}\n", root.display()));
 }
 
@@ -119,7 +119,7 @@ fn a_dirty_project_is_refused_before_anything_is_compiled() {
 #[test]
 fn a_failing_install_is_an_error_naming_the_project_and_confirms_nothing() {
     let (_d, _root, entries) = fx();
-    let l = Fake::new(&[]).answering("dotfiles heavy run", Err("exit 101"));
+    let l = Fake::new(&[]).answering("actqueue run", Err("exit 101"));
     let (r, out) = go(&opts(None, None, false), &entries, &probe(), &l);
     let msg = r.err().map(|e| format!("{e:#}")).unwrap_or_default();
     assert!(msg.contains("Cargo installation failed for ss") && msg.contains("exit 101"), "{msg}");
