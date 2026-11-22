@@ -1,4 +1,6 @@
-# Context — 2026-11-21
+# Context — 2026-11-22
+
+- 2026-11-22 (branch `feat/use-actqueue`, owner's request): `actrepo install` runs `actqueue run -- cargo install …` instead of `dotfiles heavy run -- …` (`src/install/mod.rs`; tests `src/install/run_tests.rs`, `tests/install_cli.rs`). Red first (6 failed), then 979 tests green, clippy `-D warnings` and fmt clean, `cargo mutants --file src/install/mod.rs`: 2 caught, 0 missed. `actrepo build` still calls the pinned actmake revision, whose builds go through `dotfiles heavy run` until the pin is bumped to actmake's `feat/use-actqueue` (actmake PR in flight): `tests/build_cli.rs` changes with that bump.
 
 - Rust CLI. Reuses: `actname` lib (git dep pinned to Actname `001768a`, includes the git/dev-tooling lexicon, PR #1 merged), `dotfiles project` (setup/list/status/pr/doctor), `gh`. Source: `Cargo.toml`, `src/`.
 - Replaced an earlier bash+bats version the same day (same behaviour, now delegating scaffold to `dotfiles project setup`).
