@@ -15,20 +15,22 @@ fetched over ssh), `gh` authenticated (`gh auth login`) and `dotfiles` on `PATH`
 
 ```bash
 CARGO_NET_GIT_FETCH_WITH_CLI=true \
-  cargo install --locked --git https://github.com/grosjeanbaptiste/repo
+  cargo install --locked --git https://github.com/grosjeanbaptiste/actrepo
 export PATH="$HOME/.cargo/bin:$PATH"
 actrepo new package/rust --prefix act --domain "git repositories tooling" --dry-run
 ```
 
 From a checkout: `cargo install --locked --path .` (`.cargo/config.toml` already sets
 the git fetch). The binary is `~/.cargo/bin/actrepo`; update by re-running the first
-command with `--force`.
+command with `--force`, or with `actinstall update`.
 
 ## Usage
 
 ```bash
 actrepo new package/rust --prefix act --domain "git repositories tooling" [--root ~/Source] [--no-push] [--dry-run]
 actrepo new package/rust --name ifdck --no-push   # exact name, still checked
+actrepo new package/rust --need "<need>" --prefix act --domain "<words>" [--force]   # ask actit first: a tool that already covers the need stops the run; --force creates anyway
+# other `new` options: --max-length N (default 10), --limit N (default 20), --via-dotfiles (scaffold with `dotfiles project setup`)
 actrepo check [path] [--type t]                    # audit a project against the templates
 actrepo apply [path] [--type t] [--force|--diff]   # drop/refresh the standard files
 actrepo license [path]                             # none | proprietary | open | other
@@ -41,7 +43,7 @@ actrepo move DIR --into PARENT [--fleet DIR]... [--dry-run]   # a folder and eve
 actrepo rename-branch [PATH] [--from master] [--to main] [--dry-run] [--delete-old]   # default branch, local + GitHub
 actrepo push [--dir PATH] [--dry-run] [--yes]      # push every nested repo that is clean and ahead; asks first
 actrepo pr create [--base B] [--title T] [--body D]    # PR for the current branch; title/description asked on stdin if not given
-actrepo pr merge [N] [--yes]                           # merge commit, branch deleted, base fast-forwarded locally, then, only once the head is verified contained in origin/BASE: the clean worktree holding it, the local branch and a leftover remote branch removed (a worktree with changes is kept, with a warning)
+actrepo pr merge [N] [--yes]                           # merge commit (a CONFLICTING branch first gets the base merged into it; unresolvable conflicts are refused), branch deleted, base fast-forwarded locally, then, only once the head is verified contained in origin/BASE: the clean worktree holding it, the local branch and a leftover remote branch removed (a worktree with changes is kept, with a warning)
 actrepo worktree list [--json] [--owners]               # worktrees of the repository here: path, branch, main, detached, prunable; --owners adds the live agent sessions working in each (needs `actsessions` with `list --json`)
 actrepo worktree prune [--base main] [-n]               # remove each clean worktree whose pushed branch is contained in origin/BASE, and the branch; `actrepo pr merge` runs it
 actrepo workspace list | status | push [-n]            # folders of the nearest *.code-workspace ($DOTFILES_WORKSPACE_FILE overrides)
@@ -53,7 +55,9 @@ actrepo deploy ENV TARGET [PATH] [--project N] [-y] [--dry-run] [--store-page]  
 actrepo run NAME-OR-DIR [VERB [ARGS...]]               # run a Makefile target, melos script or cargo/flutter command (publish = actrepo deploy/release); no VERB lists them
 actrepo doctor [PATH]                                 # one-glance health: git, open PRs and CI (gh via actautoma), TODO/FIXME, licence, audit
 actrepo audit [PATH]                                  # env vars / CI secrets a project references, and where each is fulfilled
-actrepo doctor | …                                     # forwarded to `dotfiles project`
+actrepo pin DEP [REV]                                  # where a git dependency is pinned across the workspace repos (fails when they differ); with a full 40-character REV, pins them all to it
+actrepo completions zsh|bash                           # completion script: eval "$(actrepo completions zsh)"
+actrepo <other command> …                              # forwarded to `dotfiles project` (e.g. `tex`)
 ```
 
 Names whose directory exists, or that any GitHub owner already uses, are skipped.
