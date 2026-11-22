@@ -66,7 +66,7 @@ Names whose directory exists, or that any GitHub owner already uses, are skipped
 
 ```bash
 cargo test && cargo clippy --all-targets -- -D warnings
-dotfiles heavy run --medium -- cargo test --test live -- --ignored   # real pipeline for ifdck, no GitHub write
+actqueue run --medium -- cargo test --test live -- --ignored   # real pipeline for ifdck, no GitHub write
 ```
 
 Coverage of `actrepo new`: 36 unit tests (fakes), 10 CLI tests (no network), 17 live tests.

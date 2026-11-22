@@ -1,6 +1,6 @@
 //! Real pipeline for `ifdck`: actit -> gh (read only) -> `dotfiles project setup --no-push`
 //! into temp directories. Nothing is created on GitHub. Needs gh, dotfiles and network:
-//! `dotfiles heavy run --medium -- cargo test --test live -- --ignored`.
+//! `actqueue run --medium -- cargo test --test live -- --ignored`.
 use std::path::Path;
 use std::process::{Command, Output};
 
