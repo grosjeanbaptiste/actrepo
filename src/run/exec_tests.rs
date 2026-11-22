@@ -240,3 +240,28 @@ fn an_unreadable_makefile_is_an_error() {
     ok(fs::set_permissions(d.path().join("Makefile"), fs::Permissions::from_mode(0o000)));
     assert!(go(d.path(), "a", &[], &Fake::exiting(0)).0.is_err());
 }
+
+#[test]
+fn a_heavy_makefile_target_waits_for_a_queue_slot() {
+    for verb in ["test", "check", "ci-local", "melos_bootstrap"] {
+        let d = project(&[("Makefile", &format!("{verb}:\n"))]);
+        let r = Fake::exiting(0);
+        ok(go(d.path(), verb, &[], &r).0);
+        assert_eq!(
+            calls(&r),
+            vec![("actqueue".into(), s(&["run", "--medium", "--", "make", "-C", &dir_arg(d.path()), verb]))],
+            "{verb}"
+        );
+    }
+}
+
+#[test]
+fn a_heavy_target_keeps_its_args_variable_inside_the_queue() {
+    let d = project(&[("Makefile", "test:\n")]);
+    let r = Fake::exiting(0);
+    ok(go(d.path(), "test", &["-x"], &r).0);
+    assert_eq!(
+        calls(&r)[0].1,
+        s(&["run", "--medium", "--", "make", "-C", &dir_arg(d.path()), "test", "ARGS=-x"])
+    );
+}
