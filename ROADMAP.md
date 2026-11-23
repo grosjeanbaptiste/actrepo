@@ -45,7 +45,7 @@ leaves the worktree behind (nothing says which file blocks it).
 
 When 3 branches are ahead and 3 are behind (across repositories and worktrees), the tools settle all of them without a human sequencing each command.
 
-- **`actrepo sync [--dry-run]`** (verb, actrepo): for every registered repository and worktree, compute ahead/behind per branch against its upstream, then act:
+- **`actrepo sync [--dry-run]`** (verb, actrepo; built 2026-11-23, see CONTEXT.md; the dirty-overlap refinement and the heavy-lane serialising of pushes remain): for every registered repository and worktree, compute ahead/behind per branch against its upstream, then act:
   - ahead only: push (pre-push gate runs; one slot at a time through the heavy lane; never the default branch of a non-`openacte` repository, never a force);
   - behind only: pull fast-forward only; a checkout that is not the caller's is never switched;
   - diverged: stop for that branch, report both counts and the first conflicting file; `actautoma resolve-conflicts` takes over;
