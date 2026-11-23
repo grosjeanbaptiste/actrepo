@@ -205,7 +205,7 @@ enum Cmd {
     Deploy {
         /// prod | test
         env: String,
-        /// web | ios | android | mas | homebrew | windows | linux | all
+        /// web | ios | android | mas | homebrew | windows | linux | mobile | all
         target: String,
         /// Project directory.
         #[arg(default_value = ".")]
