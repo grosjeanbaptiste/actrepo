@@ -1,4 +1,4 @@
-//! The pure plan: what to do for each branch, from its ahead/behind counts. Red stub.
+//! The pure plan: what to do for each branch, from its ahead/behind counts. Nothing here touches git.
 use std::path::PathBuf;
 
 /// One local branch and how it stands against its upstream.
@@ -41,12 +41,75 @@ pub enum Step {
     },
 }
 
-pub fn plan(_branches: &[Branch]) -> Vec<Step> {
-    unimplemented!("red")
+/// One step per branch that is not in step with its upstream, in input order.
+pub fn plan(branches: &[Branch]) -> Vec<Step> {
+    branches.iter().filter_map(step).collect()
+}
+
+fn step(b: &Branch) -> Option<Step> {
+    let (repo, branch) = (b.repo.clone(), b.name.clone());
+    let skip = |why: &str| {
+        Some(Step::Skip {
+            repo: repo.clone(),
+            branch: branch.clone(),
+            why: why.into(),
+        })
+    };
+    let Some(upstream) = b.upstream.clone() else {
+        return skip("no upstream");
+    };
+    match (b.ahead, b.behind) {
+        (0, 0) => None,
+        (ahead, behind) if ahead > 0 && behind > 0 => Some(Step::Diverged {
+            repo,
+            branch,
+            ahead,
+            behind,
+        }),
+        (_, 0) if b.default_branch => skip("default branch is never pushed"),
+        (count, 0) => Some(Step::Push {
+            repo,
+            branch,
+            count,
+        }),
+        _ if b.checked_out && b.dirty => skip("dirty tree"),
+        (_, count) => Some(Step::Pull {
+            repo,
+            branch,
+            upstream,
+            count,
+            checked_out: b.checked_out,
+        }),
+    }
 }
 
 impl Step {
+    /// `<repo> <branch>: <what>`, the same words in the plan and in the report.
     pub fn line(&self) -> String {
-        unimplemented!("red")
+        match self {
+            Step::Push {
+                repo,
+                branch,
+                count,
+            } => format!("{} {branch}: push {count}", repo.display()),
+            Step::Pull {
+                repo,
+                branch,
+                count,
+                ..
+            } => format!("{} {branch}: pull {count}", repo.display()),
+            Step::Diverged {
+                repo,
+                branch,
+                ahead,
+                behind,
+            } => {
+                format!(
+                    "{} {branch}: diverged {ahead} ahead, {behind} behind",
+                    repo.display()
+                )
+            }
+            Step::Skip { repo, branch, why } => format!("{} {branch}: skip, {why}", repo.display()),
+        }
     }
 }
