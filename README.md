@@ -40,7 +40,7 @@ actrepo actname generate --prefix act --domain "<words>" [...]   # actname in-pr
 actrepo actautoma rename-repo OWNER/OLD NEW [--dir D] [--dry-run] # actautoma in-process (what `actrepo rename` wraps)
 actrepo rename OWNER/OLD NEW [--dir DIR] [--into PARENT] [--local-only] [--dry-run]   # a repository renamed everywhere: platform, origin, folder, written references, registry row
 actrepo move DIR --into PARENT [--fleet DIR]... [--dry-run]   # a folder and every repository under it (worktrees included) moved in one step; repos found by scanning, every path written in them corrected (actautoma move)
-actrepo rename-branch [PATH] [--from master] [--to main] [--dry-run] [--delete-old]   # default branch, local + GitHub
+actrepo rename-branch [PATH] [--from master] [--to main] [--dry-run] [--delete-old] [--rewrite]   # default branch, local + GitHub; --rewrite edits the references in tracked files (all of `.github/`, `origin/OLD`, `heads/OLD`, "OLD branch" elsewhere), the rest stays a `warn:` line; nothing is committed
 actrepo push [--dir PATH] [--dry-run] [--yes]      # push every nested repo that is clean and ahead; asks first
 actrepo pr create [--base B] [--title T] [--body D]    # PR for the current branch; title/description asked on stdin if not given
 actrepo pr merge [N] [--yes]                           # merge commit (a CONFLICTING branch first gets the base merged into it; unresolvable conflicts are refused), branch deleted, base fast-forwarded locally, then, only once the head is verified contained in origin/BASE: the clean worktree holding it, the local branch and a leftover remote branch removed (a worktree with changes is kept, with a warning)
