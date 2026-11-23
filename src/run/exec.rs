@@ -159,6 +159,10 @@ fn kind_verb(
     }))
 }
 
+/// Makefile targets that build or test a whole project: they wait for a slot in the shared
+/// heavy queue (`actqueue`) instead of starting at once on the 16 GB machine.
+const HEAVY_TARGETS: [&str; 4] = ["test", "check", "ci-local", "melos_bootstrap"];
+
 fn makefile_target(
     dir: &Path,
     verb: &str,
@@ -172,6 +176,11 @@ fn makefile_target(
     ];
     if !args.is_empty() {
         all.push(format!("ARGS={}", args.join(" ")));
+    }
+    if HEAVY_TARGETS.contains(&verb) {
+        let mut queued: Vec<String> = ["run", "--medium", "--", "make"].map(String::from).into();
+        queued.extend(all);
+        return finish(runner.run("actqueue", &queued, None)?);
     }
     finish(runner.run("make", &all, None)?)
 }
