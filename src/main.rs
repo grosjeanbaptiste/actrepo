@@ -105,6 +105,11 @@ enum Cmd {
         /// Also delete the old branch on origin (irreversible).
         #[arg(long)]
         delete_old: bool,
+        /// Rewrite the references to the old name in the tracked files: every whole-word
+        /// match under `.github/`, and `origin/OLD`, `heads/OLD`, "OLD branch", "branch OLD"
+        /// elsewhere. Other lines are still listed as warnings.
+        #[arg(long)]
+        rewrite: bool,
     },
     /// Rename a repository everywhere: platform, origin, folder, written references, registry.
     Rename {
@@ -208,7 +213,7 @@ enum Cmd {
     Deploy {
         /// prod | test
         env: String,
-        /// web | ios | android | mas | homebrew | windows | linux | all
+        /// web | ios | android | mas | homebrew | windows | linux | mobile | all
         target: String,
         /// Project directory.
         #[arg(default_value = ".")]
@@ -527,7 +532,8 @@ fn main() -> Result<()> {
             to,
             dry_run,
             delete_old,
-        } => branch::command::run(&path, &from, &to, dry_run, delete_old),
+            rewrite,
+        } => branch::command::run(&path, &from, &to, dry_run, delete_old, rewrite),
         Cmd::Rename {
             slug,
             new,

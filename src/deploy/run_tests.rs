@@ -164,3 +164,22 @@ fn store_page_for_all_or_web_fails_after_the_question_like_bash() {
     let o = go(&p, "", Fake::default());
     assert_eq!(msg(&o), "--store-page applies to ios and android, not 'all'.");
 }
+
+#[test]
+fn mobile_plans_phones_tablets_then_desktops_and_never_web() {
+    let d = project();
+    let mut p = opts(d.path(), Choice::Mobile);
+    p.dry_run = true;
+    let o = go(&p, "", Fake::default());
+    assert!(o.result.is_ok(), "{}", msg(&o));
+    let starts: Vec<&str> = o.out.lines().map(|l| l.split(' ').next().unwrap_or_default()).collect();
+    assert_eq!(starts, ["flutter", "flutter", "macOS", "flutter", "flutter", "flutter"]);
+    assert!(o.tool.runs().is_empty());
+}
+
+#[test]
+fn mobile_goes_on_after_a_failure_and_names_every_failed_target() {
+    let d = ok(tempfile::tempdir());
+    let o = go(&opts(d.path(), Choice::Mobile), "", Fake { failing: vec!["flutter".into()], ..Fake::default() });
+    assert_eq!(msg(&o), "deploy: 6 of 6 target(s) failed (ios, android, mas, homebrew, windows, linux)");
+}

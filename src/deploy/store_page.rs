@@ -80,6 +80,7 @@ pub fn push(c: &mut Ctx, choice: Choice, dry_run: bool) -> Result<()> {
             t.name()
         ),
         Choice::All => bail!("--store-page applies to ios and android, not 'all'."),
+        Choice::Mobile => bail!("--store-page applies to ios and android, not 'mobile'."),
     };
     let stores = c.root.join("stores");
     if !stores.is_dir() {

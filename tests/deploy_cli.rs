@@ -124,7 +124,7 @@ fn an_invalid_env_or_target_exits_1_naming_the_value() {
     assert_eq!(o.status.code(), Some(1));
     assert!(
         err(&o).contains(
-            "invalid target 'pc' — expected: web ios android mas homebrew windows linux | all"
+            "invalid target 'pc' — expected: web ios android mas homebrew windows linux | mobile | all"
         ),
         "{}",
         err(&o)

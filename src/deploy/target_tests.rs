@@ -37,7 +37,7 @@ fn target_names_are_the_documented_ones() {
 fn an_invalid_target_lists_the_concrete_ones_then_all() {
     assert_eq!(
         msg(Choice::parse("pc")),
-        "invalid target 'pc' — expected: web ios android mas homebrew windows linux | all"
+        "invalid target 'pc' — expected: web ios android mas homebrew windows linux | mobile | all"
     );
     assert!(Choice::parse("ALL").is_err() && Choice::parse("").is_err());
 }
@@ -46,4 +46,19 @@ fn an_invalid_target_lists_the_concrete_ones_then_all() {
 fn all_fans_out_over_the_concrete_targets_in_order_and_one_stays_one() {
     assert_eq!(Choice::All.targets(), CONCRETE.to_vec());
     assert_eq!(Choice::One(Target::Ios).targets(), vec![Target::Ios]);
+}
+
+#[test]
+fn mobile_parses_and_builds_phones_and_tablets_then_every_desktop_target() {
+    assert_eq!(Choice::parse("mobile").ok(), Some(Choice::Mobile));
+    assert_eq!(
+        Choice::Mobile.targets(),
+        vec![Target::Ios, Target::Android, Target::Mas, Target::Homebrew, Target::Windows, Target::Linux]
+    );
+}
+
+#[test]
+fn mobile_leaves_web_out_and_ios_and_android_alone_stay_single() {
+    assert!(!Choice::Mobile.targets().contains(&Target::Web));
+    assert_eq!(Choice::One(Target::Android).targets(), vec![Target::Android]);
 }
