@@ -1,8 +1,8 @@
 //! Test doubles for the two seams: GitHub (`RepoNames`) and `dotfiles` (`Scaffold`).
 use crate::pipeline::Scaffold;
 use actautoma::forge::{
-    CiRun, Error as ForgeError, Forge, Mergeable, NewPullRequest, NewRepo, OpenPr, PullRequest,
-    Repo,
+    CiRun, Error as ForgeError, Forge, Mergeable, NewPullRequest, NewRelease, NewRepo, OpenPr,
+    PullRequest, Repo,
 };
 use actautoma::pulls::{PrFilter, PrState, PrSummary, Pulls};
 use actit::contains::Listing;
@@ -265,6 +265,18 @@ impl Forge for FakeForge {
         );
         self.calls.borrow_mut().push(line);
         self.check("create_repo")
+    }
+
+    fn create_release(&self, r: &NewRelease) -> Result<(), ForgeError> {
+        let pre = if r.prerelease { " prerelease" } else { "" };
+        let asset = r
+            .asset
+            .as_ref()
+            .map(|a| format!(" {}", a.display()))
+            .unwrap_or_default();
+        let line = format!("create_release {} {}{pre}{asset}", r.slug, r.tag);
+        self.calls.borrow_mut().push(line);
+        self.check("create_release")
     }
 
     fn open_prs(&self) -> Result<Vec<OpenPr>, ForgeError> {

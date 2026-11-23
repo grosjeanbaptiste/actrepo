@@ -19,7 +19,7 @@ fn go(root: &Path, choice: Choice, dry_run: bool, extra: &[(&str, &str)], tool: 
     let vars = Vars::of(&[&[("STORES_PYTHON", "/py"), ("STORES_SCRIPTS_DIR", "/s")][..], extra].concat(), &root.join("home"));
     let (mut out, mut err) = (vec![], vec![]);
     let result = {
-        let mut c = Ctx { env: Env::Prod, root, vars: &vars, tool: &tool, out: &mut out, err: &mut err };
+        let mut c = Ctx { env: Env::Prod, root, vars: &vars, tool: &tool, forge: &crate::deploy::fake::forge(), out: &mut out, err: &mut err };
         push(&mut c, choice, dry_run)
     };
     Out { result, tool, out: String::from_utf8_lossy(&out).into_owned() }

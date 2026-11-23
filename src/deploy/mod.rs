@@ -1,6 +1,9 @@
 //! `actrepo deploy ENV TARGET [PATH]` (port of dotfiles `project deploy`).
 pub mod asc;
 pub mod brew;
+pub mod brew_beta;
+pub mod brew_release;
+pub mod brew_steps;
 pub mod command;
 pub mod ctx;
 #[cfg(test)]
@@ -17,6 +20,7 @@ pub mod tool;
 pub mod vars;
 pub mod web;
 
+use actautoma::forge::Forge;
 use anyhow::{Context, Result, bail};
 use ctx::Ctx;
 use std::io::{BufRead, Write};
@@ -69,6 +73,7 @@ pub fn run(
     opts: &Opts,
     vars: &Vars,
     tool: &dyn Tool,
+    forge: &dyn Forge,
     input: &mut dyn BufRead,
     out: &mut dyn Write,
     err: &mut dyn Write,
@@ -85,6 +90,7 @@ pub fn run(
         root: &root,
         vars,
         tool,
+        forge,
         out,
         err,
     };
