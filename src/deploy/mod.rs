@@ -20,6 +20,7 @@ pub mod tool;
 pub mod vars;
 pub mod web;
 
+use actautoma::forge::Forge;
 use anyhow::{Context, Result, bail};
 use ctx::Ctx;
 use std::io::{BufRead, Write};
@@ -72,6 +73,7 @@ pub fn run(
     opts: &Opts,
     vars: &Vars,
     tool: &dyn Tool,
+    forge: &dyn Forge,
     input: &mut dyn BufRead,
     out: &mut dyn Write,
     err: &mut dyn Write,
@@ -88,6 +90,7 @@ pub fn run(
         root: &root,
         vars,
         tool,
+        forge,
         out,
         err,
     };

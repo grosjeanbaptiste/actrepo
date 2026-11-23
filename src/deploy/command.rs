@@ -3,6 +3,7 @@ use super::target::{Choice, Env};
 use super::tool::{Call, Tool};
 use super::vars::Vars;
 use super::{Opts, run};
+use actautoma::{gh::Gh, process::ProcessRunner};
 use anyhow::{Context, Result, bail};
 use std::os::unix::fs::PermissionsExt;
 use std::os::unix::process::ExitStatusExt;
@@ -85,6 +86,7 @@ pub fn command_line(args: Args) -> Result<()> {
         &opts,
         &vars,
         &Process,
+        &Gh::new(ProcessRunner),
         &mut std::io::stdin().lock(),
         &mut out,
         &mut err,

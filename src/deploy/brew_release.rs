@@ -5,7 +5,7 @@ use super::brew_beta::{asset_name, beta_version, tag};
 use super::brew_steps::{build_number, ensure_beta_cask, git, path_var, stage};
 use super::ctx::Ctx;
 use super::stores;
-use super::tool::plain;
+use actautoma::forge::NewRelease;
 use anyhow::{Context, Result, bail};
 
 /// Publishes the beta: prerelease, `@beta` cask bumped to it, commit in the tap (and push on request).
@@ -32,22 +32,16 @@ pub fn publish(c: &mut Ctx) -> Result<()> {
     let (tag, asset) = (tag(&version), asset_name(&app, &version));
     ensure_beta_cask(&tap.join("Casks"), &app.to_lowercase())?;
     let staged = stage(&dmg, &asset, &tag)?;
-    let release = [
-        "release",
-        "create",
-        &tag,
-        "--repo",
-        &repo,
-        "--prerelease",
-        "--title",
-        &tag,
-        "--notes",
-        "Beta build",
-        &staged.display().to_string(),
-    ]
-    .map(String::from);
-    c.tool
-        .run(&plain("gh", &release))
+    let release = NewRelease {
+        slug: repo.clone(),
+        tag: tag.clone(),
+        title: tag.clone(),
+        notes: "Beta build".into(),
+        prerelease: true,
+        asset: Some(staged),
+    };
+    c.forge
+        .create_release(&release)
         .context("creating the GitHub prerelease")?;
     let url = format!("https://github.com/{repo}/releases/download/{tag}/{asset}");
     bump(c, &version, &url, &tap, "beta")?;

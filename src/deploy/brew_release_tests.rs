@@ -1,5 +1,8 @@
 use super::*;
-use crate::deploy::fake::{Fake, drive, message};
+use crate::deploy::ctx::Ctx;
+use crate::deploy::fake::{Fake, forge, message};
+use crate::deploy::vars::Vars;
+use crate::fakes::FakeForge;
 use crate::deploy::target::Env;
 use std::fs;
 
@@ -30,6 +33,11 @@ fn fake() -> Fake {
 }
 
 fn go(c: &Case, extra: &[(&str, &str)], tool: Fake) -> (Result<()>, Fake) {
+    let (r, t, _) = go_forge(c, extra, tool, forge());
+    (r, t)
+}
+
+fn go_forge(c: &Case, extra: &[(&str, &str)], tool: Fake, forge: FakeForge) -> (Result<()>, Fake, FakeForge) {
     let (dmg, tap) = (c.proj.path().join("a.dmg"), c.tap.path().to_path_buf());
     let base = [
         ("BREW_DMG", dmg.to_str().unwrap_or_default()),
@@ -37,22 +45,31 @@ fn go(c: &Case, extra: &[(&str, &str)], tool: Fake) -> (Result<()>, Fake) {
         ("STORES_PYTHON", "/py"),
         ("STORES_SCRIPTS_DIR", "/s"),
     ];
-    drive(Env::Test, c.proj.path(), &[&base[..], extra].concat(), tool, publish)
+    let home = c.proj.path().join("home");
+    let vars = Vars::of(&[&base[..], extra].concat(), &home);
+    let (mut out, mut err) = (vec![], vec![]);
+    let result = {
+        let mut ctx = Ctx { env: Env::Test, root: c.proj.path(), vars: &vars, tool: &tool, forge: &forge, out: &mut out, err: &mut err };
+        publish(&mut ctx)
+    };
+    (result, tool, forge)
 }
 
 #[test]
 fn a_beta_is_a_prerelease_then_a_bump_then_a_commit() {
     let c = case(true);
-    let (r, t) = go(&c, &[], fake());
+    let (r, t, f) = go_forge(&c, &[], fake(), forge());
     assert!(r.is_ok(), "{}", message(&r));
+    let rel = f.calls.borrow().clone();
+    assert_eq!(rel.len(), 1, "{rel:?}");
+    assert!(rel[0].starts_with("create_release acteble/homebrew-acteble v1.2.3-beta.42 prerelease "));
+    assert!(rel[0].ends_with("Acteble-1.2.3-beta.42.dmg"));
     let l = t.lines();
-    assert_eq!(l.len(), 4, "{l:?}");
-    assert!(l[0].starts_with("gh release create v1.2.3-beta.42 --repo acteble/homebrew-acteble --prerelease"));
-    assert!(l[0].ends_with("Acteble-1.2.3-beta.42.dmg"));
-    assert!(l[1].starts_with("/py /s/update_brew.py --version 1.2.3-beta.42 --app-url https://github.com/acteble/homebrew-acteble/releases/download/v1.2.3-beta.42/Acteble-1.2.3-beta.42.dmg"));
-    assert!(l[1].ends_with("--channel beta"));
-    assert_eq!(l[2], "git add Casks");
-    assert_eq!(l[3], "git commit -m chore: Acteble beta 1.2.3-beta.42");
+    assert_eq!(l.len(), 3, "{l:?}");
+    assert!(l[0].starts_with("/py /s/update_brew.py --version 1.2.3-beta.42 --app-url https://github.com/acteble/homebrew-acteble/releases/download/v1.2.3-beta.42/Acteble-1.2.3-beta.42.dmg"));
+    assert!(l[0].ends_with("--channel beta"));
+    assert_eq!(l[1], "git add Casks");
+    assert_eq!(l[2], "git commit -m chore: Acteble beta 1.2.3-beta.42");
 }
 
 #[test]
@@ -60,8 +77,8 @@ fn the_git_calls_run_in_the_tap() {
     let c = case(true);
     let (_, t) = go(&c, &[], fake());
     let runs = t.runs();
+    assert_eq!(runs[1].cwd.as_deref(), Some(c.tap.path()));
     assert_eq!(runs[2].cwd.as_deref(), Some(c.tap.path()));
-    assert_eq!(runs[3].cwd.as_deref(), Some(c.tap.path()));
 }
 
 #[test]
@@ -115,8 +132,8 @@ fn an_unreadable_commit_count_is_named() {
 #[test]
 fn the_build_number_can_be_given() {
     let c = case(true);
-    let (_, t) = go(&c, &[("BREW_BUILD", "7")], Fake::default());
-    assert!(t.lines()[0].starts_with("gh release create v1.2.3-beta.7 "));
+    let (_, _, f) = go_forge(&c, &[("BREW_BUILD", "7")], Fake::default(), forge());
+    assert!(f.calls.borrow()[0].starts_with("create_release acteble/homebrew-acteble v1.2.3-beta.7 "));
 }
 
 #[test]
@@ -129,9 +146,9 @@ fn a_build_number_that_is_not_a_number_is_refused() {
 #[test]
 fn a_failing_release_stops_before_the_bump_and_the_commit() {
     let c = case(true);
-    let (r, t) = go(&c, &[], Fake { failing: vec!["gh".into()], ..fake() });
-    assert!(r.is_err());
-    assert_eq!(t.runs().len(), 1);
+    let (r, t, _) = go_forge(&c, &[], fake(), forge().failing("create_release"));
+    assert_eq!(message(&r), "creating the GitHub prerelease");
+    assert!(t.runs().is_empty());
 }
 
 #[test]
@@ -155,7 +172,8 @@ fn nothing_is_pushed_unless_asked() {
 fn the_repository_and_the_app_can_be_overridden() {
     let c = case(true);
     ok(fs::write(c.tap.path().join("Casks/x.rb"), STABLE.replace("acteble", "x")));
-    let (_, t) = go(&c, &[("BREW_REPO", "o/r"), ("BREW_APP", "X")], fake());
-    assert!(t.lines()[0].contains("--repo o/r "));
-    assert!(t.lines()[0].ends_with("X-1.2.3-beta.42.dmg"));
+    let (_, _, f) = go_forge(&c, &[("BREW_REPO", "o/r"), ("BREW_APP", "X")], fake(), forge());
+    let rel = f.calls.borrow()[0].clone();
+    assert!(rel.starts_with("create_release o/r v1.2.3-beta.42 "));
+    assert!(rel.ends_with("X-1.2.3-beta.42.dmg"));
 }
