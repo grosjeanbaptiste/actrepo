@@ -1,7 +1,7 @@
 use super::*;
 
 fn opts(from: &str, to: &str, delete_old: bool) -> Opts {
-    Opts { from: from.into(), to: to.into(), delete_old }
+    Opts { from: from.into(), to: to.into(), delete_old, rewrite: false }
 }
 
 fn lines(steps: &[Step]) -> Vec<String> {
