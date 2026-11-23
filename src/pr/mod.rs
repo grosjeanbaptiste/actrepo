@@ -5,3 +5,6 @@ pub mod create;
 pub mod merge;
 pub mod own;
 pub mod sync;
+pub mod verbs;
+#[cfg(test)]
+mod verbs_tests;
