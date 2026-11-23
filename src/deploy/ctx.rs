@@ -2,6 +2,7 @@
 use super::target::Env;
 use super::tool::Tool;
 use super::vars::Vars;
+use actautoma::forge::Forge;
 use std::io::Write;
 use std::path::Path;
 
@@ -10,6 +11,8 @@ pub struct Ctx<'a> {
     pub root: &'a Path,
     pub vars: &'a Vars,
     pub tool: &'a dyn Tool,
+    /// The hosting platform: releases are made through it, never by running `gh` here.
+    pub forge: &'a dyn Forge,
     pub out: &'a mut dyn Write,
     pub err: &'a mut dyn Write,
 }

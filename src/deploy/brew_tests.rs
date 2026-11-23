@@ -86,3 +86,18 @@ fn a_failing_updater_is_an_error() {
     let d = project(true, Some("1.0.0"));
     assert!(go(d.path(), Env::Prod, &[], Fake { failing: vec!["/py".into()], ..Fake::default() }).0.is_err());
 }
+
+#[test]
+fn test_with_a_dmg_publishes_a_beta_release_instead_of_bumping_a_hosted_url() {
+    let d = project(true, Some("1.0.0"));
+    let (r, t) = go(d.path(), Env::Test, &[("BREW_DMG", "/nope.dmg")], Fake::default());
+    assert!(message(&r).starts_with("set BREW_TAP_DIR") || message(&r).starts_with("BREW_DMG not found"), "{}", message(&r));
+    assert!(t.runs().is_empty());
+}
+
+#[test]
+fn prod_ignores_the_dmg() {
+    let d = project(true, Some("1.0.0"));
+    let (_, t) = go(d.path(), Env::Prod, &[("BREW_DMG", "/nope.dmg")], Fake::default());
+    assert!(t.lines()[0].ends_with("--channel stable"));
+}

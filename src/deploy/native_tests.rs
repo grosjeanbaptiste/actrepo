@@ -39,7 +39,7 @@ fn go(root: &Path, env: Env, target: Target, dry_run: bool, extra: &[(&str, &str
     let vars = Vars::of(&[&VARS[..], extra].concat(), &home);
     let (mut out, mut err) = (vec![], vec![]);
     let result = {
-        let mut c = Ctx { env, root, vars: &vars, tool: &tool, out: &mut out, err: &mut err };
+        let mut c = Ctx { env, root, vars: &vars, tool: &tool, forge: &crate::deploy::fake::forge(), out: &mut out, err: &mut err };
         deploy(&mut c, target, dry_run)
     };
     Out { result, tool, out: String::from_utf8_lossy(&out).into_owned() }
