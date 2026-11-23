@@ -3,9 +3,9 @@
 use actautoma::{gh::Gh, process::ProcessRunner};
 use actit::forge_names::ForgeNames;
 use actrepo::{
-    audit, branch, build, delegate, deploy, device, doctor, hook, install, license, naming, need,
-    orchestrate, pin, pipeline, pr, push, registry, release, rename, root, run, scaffold,
-    workspace, worktree,
+    audit, branch, build, delegate, deploy, device, docpaths, doctor, hook, install, license,
+    naming, need, orchestrate, pin, pipeline, pr, push, registry, release, rename, root, run,
+    scaffold, workspace, worktree,
 };
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
@@ -82,6 +82,14 @@ enum Cmd {
     License {
         #[arg(default_value = ".")]
         path: String,
+    },
+    /// Check, or with --write fix, the Path column of markdown tables of repositories against the registry.
+    DocsPaths {
+        #[arg(required = true)]
+        files: Vec<std::path::PathBuf>,
+        /// Rewrite the stale paths instead of failing on them.
+        #[arg(long)]
+        write: bool,
     },
     /// Rename a repository's default branch, locally and on GitHub (master -> main).
     RenameBranch {
@@ -526,6 +534,18 @@ fn main() -> Result<()> {
                 &mut std::io::stdin().lock(),
                 &mut out,
                 &mut err,
+            )
+        }
+        Cmd::DocsPaths { files, write } => {
+            let home = std::env::var("HOME").context("HOME is not set")?;
+            let file = registry::file::path(|k| std::env::var(k).ok())?;
+            let entries = registry::file::read(&file)?;
+            docpaths::command::run(
+                &files,
+                write,
+                &entries,
+                Path::new(&home),
+                &mut std::io::stdout().lock(),
             )
         }
         Cmd::License { path } => {
