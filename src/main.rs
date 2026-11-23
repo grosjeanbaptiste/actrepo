@@ -4,7 +4,7 @@ use actautoma::{gh::Gh, process::ProcessRunner};
 use actit::forge_names::ForgeNames;
 use actrepo::{
     audit, branch, build, delegate, deploy, device, doctor, hook, install, license, naming, need,
-    orchestrate, pin, pipeline, pr, push, registry, release, rename, root, run, scaffold,
+    orchestrate, pin, pipeline, pr, push, registry, release, rename, root, run, scaffold, sync,
     workspace, worktree,
 };
 use anyhow::{Context, Result};
@@ -143,6 +143,14 @@ enum Cmd {
         /// Push without asking.
         #[arg(long, short = 'y')]
         yes: bool,
+    },
+    /// Settle every branch of every repository under DIR: push what is ahead, fast-forward what is behind, report what diverged.
+    Sync {
+        #[arg(default_value = ".")]
+        dir: String,
+        /// Print the plan; touch nothing.
+        #[arg(long, short = 'n')]
+        dry_run: bool,
     },
     /// Pull requests: create one from the current branch, merge one and update the local branches, view, list, retarget or close.
     Pr {
@@ -404,6 +412,16 @@ fn main() -> Result<()> {
             HookCmd::Run => hook::command::run_detached(),
             HookCmd::Sync => hook::command::run_sync(),
         },
+        Cmd::Sync { dir, dry_run } => {
+            let (mut out, mut err) = (std::io::stdout().lock(), std::io::stderr().lock());
+            sync::run::run(
+                Path::new(&dir),
+                dry_run,
+                &scaffold::native::Process,
+                &mut out,
+                &mut err,
+            )
+        }
         Cmd::Worktree { sub } => match sub {
             WtCmd::List { json, owners } => worktree::command::run_list(json, owners),
             WtCmd::Prune { base, dry_run } => worktree::command::run_prune(&base, dry_run),

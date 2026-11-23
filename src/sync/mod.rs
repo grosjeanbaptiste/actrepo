@@ -2,6 +2,7 @@
 pub mod exec;
 pub mod plan;
 pub mod read;
+pub mod run;
 
 #[cfg(test)]
 mod exec_tests;
