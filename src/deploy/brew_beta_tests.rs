@@ -53,3 +53,10 @@ fn a_beta_cask_is_not_made_into_a_beta_again() {
     let e = beta_cask("cask \"acteble@beta\" do\nend\n").err().map(|e| e.to_string());
     assert_eq!(e.as_deref(), Some("already a beta cask: acteble@beta."));
 }
+
+#[test]
+fn a_desc_that_is_not_a_plain_quoted_string_is_left_as_it_is() {
+    let stable = "cask \"acteble\" do\n  desc \"D\" # why\nend\n";
+    let beta = beta_cask(stable).unwrap_or_else(|e| panic!("{e}"));
+    assert!(beta.contains("  desc \"D\" # why\n"));
+}
