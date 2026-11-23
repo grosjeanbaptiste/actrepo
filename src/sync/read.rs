@@ -27,7 +27,7 @@ fn branch(repo: &Path, facts: &Facts, line: &str) -> Result<Branch> {
     let (ahead, behind) = if gone {
         (0, 0)
     } else {
-        counts(track).with_context(|| format!("branch {name}"))?
+        counts(track).map_err(|e| anyhow::anyhow!("branch {name}: {e:#}"))?
     };
     Ok(Branch {
         repo: repo.to_path_buf(),
@@ -36,7 +36,7 @@ fn branch(repo: &Path, facts: &Facts, line: &str) -> Result<Branch> {
         ahead,
         behind,
         checked_out: name == facts.current,
-        dirty: facts.dirty,
+        dirty: facts.dirty && name == facts.current,
         default_branch: !facts.default_branch.is_empty() && name == facts.default_branch,
     })
 }
