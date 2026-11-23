@@ -27,5 +27,6 @@ pub mod rename;
 pub mod root;
 pub mod run;
 pub mod scaffold;
+pub mod sync;
 pub mod workspace;
 pub mod worktree;
