@@ -157,3 +157,15 @@ fn each_step_has_a_one_line_report() {
     x.upstream = None;
     assert_eq!(plan(&[x])[0].line(), "/r/app d: skip, no upstream");
 }
+
+#[test]
+fn pull_only_keeps_pulls_and_divergences_and_drops_pushes_and_skips() {
+    let mut no_upstream = b("c", 0, 0);
+    no_upstream.upstream = None;
+    let steps = plan(&[b("a", 2, 0), b("b", 0, 3), b("d", 1, 1), no_upstream]);
+    assert_eq!(steps.len(), 4);
+    let kept = pull_only(steps);
+    assert_eq!(kept.len(), 2, "{kept:?}");
+    assert!(matches!(kept[0], Step::Pull { .. }), "{kept:?}");
+    assert!(matches!(kept[1], Step::Diverged { .. }), "{kept:?}");
+}

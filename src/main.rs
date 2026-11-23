@@ -164,6 +164,9 @@ enum Cmd {
         /// Print the plan; touch nothing.
         #[arg(long, short = 'n')]
         dry_run: bool,
+        /// Only fast-forward what is behind (nothing is pushed): what a session start runs.
+        #[arg(long)]
+        pull_only: bool,
     },
     /// Pull requests: create one from the current branch, merge one and update the local branches, view, list, retarget or close.
     Pr {
@@ -425,11 +428,16 @@ fn main() -> Result<()> {
             HookCmd::Run => hook::command::run_detached(),
             HookCmd::Sync => hook::command::run_sync(),
         },
-        Cmd::Sync { dir, dry_run } => {
+        Cmd::Sync {
+            dir,
+            dry_run,
+            pull_only,
+        } => {
             let (mut out, mut err) = (std::io::stdout().lock(), std::io::stderr().lock());
             sync::run::run(
                 Path::new(&dir),
                 dry_run,
+                pull_only,
                 &scaffold::native::Process,
                 &mut out,
                 &mut err,
