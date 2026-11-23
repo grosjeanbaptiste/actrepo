@@ -3,7 +3,7 @@
 use actautoma::{gh::Gh, process::ProcessRunner};
 use actit::forge_names::ForgeNames;
 use actrepo::{
-    audit, branch, build, delegate, deploy, device, doctor, install, license, naming, need,
+    audit, branch, build, delegate, deploy, device, doctor, hook, install, license, naming, need,
     orchestrate, pin, pipeline, pr, push, registry, release, rename, root, run, scaffold,
     workspace, worktree,
 };
@@ -220,6 +220,11 @@ enum Cmd {
         #[command(subcommand)]
         sub: WsCmd,
     },
+    /// After a commit: pull the branch, push it. `install` puts the git hook in a repository.
+    Hook {
+        #[command(subcommand)]
+        sub: HookCmd,
+    },
     /// Linked worktrees: remove the ones whose branch is merged.
     Worktree {
         #[command(subcommand)]
@@ -259,6 +264,22 @@ enum Cmd {
     /// any other command goes to `dotfiles project` (list, status, pr, doctor, …).
     #[command(external_subcommand)]
     Other(Vec<String>),
+}
+
+#[derive(Subcommand)]
+enum HookCmd {
+    /// Write the post-commit hook in the repository of DIR (never replaces another hook).
+    Install {
+        #[arg(default_value = ".")]
+        dir: String,
+        /// Say what would be written; touch nothing.
+        #[arg(long, short = 'n')]
+        dry_run: bool,
+    },
+    /// What the hook calls: start `hook sync` in the background and return at once.
+    Run,
+    /// Fast-forward the current branch from origin and push it, now, in the foreground.
+    Sync,
 }
 
 #[derive(Subcommand)]
@@ -375,6 +396,13 @@ fn main() -> Result<()> {
             }),
             PrCmd::Retarget { number, base } => pr::command::run_retarget(number, &base),
             PrCmd::Close { number, comment } => pr::command::run_close(number, comment.as_deref()),
+        },
+        Cmd::Hook { sub } => match sub {
+            HookCmd::Install { dir, dry_run } => {
+                hook::command::run_install(Path::new(&dir), dry_run)
+            }
+            HookCmd::Run => hook::command::run_detached(),
+            HookCmd::Sync => hook::command::run_sync(),
         },
         Cmd::Worktree { sub } => match sub {
             WtCmd::List { json, owners } => worktree::command::run_list(json, owners),
