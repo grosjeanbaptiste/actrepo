@@ -1,4 +1,4 @@
-# Context — 2026-11-22
+# Context — 2026-11-23
 
 - 2026-11-22 (branch `feat/use-actqueue`, owner's request): `actrepo install` runs `actqueue run -- cargo install …` instead of `dotfiles heavy run -- …` (`src/install/mod.rs`; tests `src/install/run_tests.rs`, `tests/install_cli.rs`). Red first (6 failed), then 979 tests green, clippy `-D warnings` and fmt clean, `cargo mutants --file src/install/mod.rs`: 2 caught, 0 missed. `actrepo build` still calls the pinned actmake revision, whose builds go through `dotfiles heavy run` until the pin is bumped to actmake's `feat/use-actqueue` (actmake PR in flight): `tests/build_cli.rs` changes with that bump.
 
@@ -53,3 +53,4 @@
 - 2026-11-23 — directive (owner, in the session): `actrepo` and `actautoma` handle every git and gh workflow. `ROADMAP.md` created with the proposed split between the two, the verbs missing today (from the raw commands used to ship 30 PRs on 2026-11-22/23) and the order; the split is not yet confirmed by the owner. Nothing built. Two defects seen in `actrepo pr merge` are listed there (peers' checkouts switched to `main`; "local update is incomplete" with untracked generated files). Source: the owner's message and the session's commands.
 
 - 2026-11-23 — the owner repeated the directive and named three workflows: push, commit, pull. `ROADMAP.md` now lists `actrepo commit` (pathspec only, trailer kept, pre-commit gate, never `--no-verify`), `actrepo pull` (fast-forward only, never switches a checkout) and `actrepo push --branch` (one named branch from a worktree, result read back). Nothing built. Source: the owner's message and `actrepo --help` (no `commit`, no `pull`).
+- 2026-11-23 — the owner added a bulk case: `actrepo` and `actautoma` must settle by themselves the case of 3 pushes and 3 pulls pending. `ROADMAP.md` now has "Bulk case": `actrepo sync [--dry-run]` (plan then act per branch: push, fast-forward pull, stop on divergence, skip dirty overlap, one failure never hides the others) and `actautoma sync-all` (adds `resolve-conflicts` and `ship`). Nothing built; needs `pull`, `push --branch`, `branch remote` first. Source: the owner's message.
