@@ -35,7 +35,7 @@ fn android(c: &mut Ctx, stores: &Path, dry_run: bool) -> Result<()> {
     );
     if !account.is_file() {
         bail!(
-            "no Play service account at {} (dotfiles secret apply).",
+            "no Play service account at {} (actesskey apply).",
             account.display()
         );
     }
