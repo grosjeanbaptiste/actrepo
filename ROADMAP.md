@@ -41,9 +41,24 @@ switched peers' checkouts to `main`; it reports "PR merged, but the local
 update is incomplete" when the worktree holds untracked generated files and
 leaves the worktree behind (nothing says which file blocks it).
 
+### Bulk case (owner, 2026-11-23): several pushes and several pulls at once
+
+When 3 branches are ahead and 3 are behind (across repositories and worktrees), the tools settle all of them without a human sequencing each command.
+
+- **`actrepo sync [--dry-run]`** (verb, actrepo): for every registered repository and worktree, compute ahead/behind per branch against its upstream, then act:
+  - ahead only: push (pre-push gate runs; one slot at a time through the heavy lane; never the default branch of a non-`openacte` repository, never a force);
+  - behind only: pull fast-forward only; a checkout that is not the caller's is never switched;
+  - diverged: stop for that branch, report both counts and the first conflicting file; `actautoma resolve-conflicts` takes over;
+  - dirty tree overlapping incoming files: skip, name the file.
+- **Plan then act.** `--dry-run` prints the plan (one line per branch: repo, branch, `push n` / `pull n` / `diverged a/b` / `skip why`); the real run executes the same plan.
+- **One failure never hides the others.** Every item is attempted, each outcome is read back (`branch remote`), one report line per item, exit non-zero when any item failed or was skipped.
+- **`actautoma sync-all`** (workflow): `actrepo sync`, then for each diverged branch `resolve-conflicts`, then `ship` where merging is authorised. Own ADR before code.
+- Tests first: a fixture with 3 ahead, 3 behind, 1 diverged, 1 dirty branch; a failing push must leave the pulls done and the exit code non-zero.
+
 ### Order
 
 1. Read-only verbs first (`pr view`, `pr list`, `branch remote`, `pr check`): additive, no risk.
 2. Then the writing single verbs (`worktree add|remove`, `pr retarget|close`).
 3. Then the `actautoma` workflows, each with its own ADR (what it may do alone, what stops it).
 4. Then a rule in `~/.claude/AGENTS.md` (dotfiles) that makes raw `git`/`gh` the exception. The rule text is proposed in the dotfiles pull request of the same day.
+5. Then the bulk case above (`actrepo sync`, then `actautoma sync-all`): it needs `pull`, `push --branch` and `branch remote` first.
