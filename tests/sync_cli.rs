@@ -154,3 +154,37 @@ fn a_diverged_branch_is_reported_and_fails_the_run_but_the_rest_is_settled() {
     );
     assert_eq!(remote_sha(&f, "p1"), git(&f.work, &["rev-parse", "p1"]));
 }
+
+/// New commit on `main` pushed from the other clone, so `work`'s checked-out `main` is behind.
+fn main_behind(f: &Fx) {
+    let other = ok(f.work.parent().ok_or("no parent")).join("other");
+    git(&other, &["checkout", "-q", "main"]);
+    commit(&other, "new-main");
+    git(&other, &["push", "-q", "origin", "main"]);
+}
+
+#[test]
+fn a_dirty_checked_out_branch_that_is_behind_is_reported_not_pulled() {
+    let f = fx();
+    main_behind(&f);
+    ok(fs::write(f.work.join("scratch"), "wip"));
+    let before = git(&f.work, &["rev-parse", "main"]);
+    let o = sync(&f, &[]);
+    assert!(!o.status.success());
+    assert!(out(&o).contains("main: skip, dirty tree"), "{}", out(&o));
+    assert_eq!(git(&f.work, &["rev-parse", "main"]), before);
+}
+
+#[test]
+fn a_clean_checked_out_branch_that_is_behind_is_pulled() {
+    let f = fx();
+    main_behind(&f);
+    let o = sync(&f, &[]);
+    assert!(
+        o.status.success(),
+        "{}\n{}",
+        out(&o),
+        String::from_utf8_lossy(&o.stderr)
+    );
+    assert_eq!(git(&f.work, &["rev-parse", "main"]), remote_sha(&f, "main"));
+}
