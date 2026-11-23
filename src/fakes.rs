@@ -4,6 +4,7 @@ use actautoma::forge::{
     CiRun, Error as ForgeError, Forge, Mergeable, NewPullRequest, NewRelease, NewRepo, OpenPr,
     PullRequest, Repo,
 };
+use actautoma::pulls::{PrFilter, PrState, PrSummary, Pulls};
 use actit::contains::Listing;
 use actit::error::Error;
 use actit::ports::RepoNames;
@@ -114,6 +115,8 @@ pub struct FakeForge {
     views: Cell<usize>,
     open: Vec<OpenPr>,
     run: Option<CiRun>,
+    listed: Vec<PrSummary>,
+    state: PrState,
     /// The operation that fails: `view`, `poll` (any view after the first), `merge`, `create`,
     /// `view_repo`, `set_default_branch`, `create_repo`, `available`, `open_prs`, `last_run`.
     fail: Option<&'static str>,
@@ -143,6 +146,8 @@ impl FakeForge {
             views: Cell::new(0),
             open: vec![],
             run: None,
+            listed: vec![],
+            state: PrState::Open,
             fail: None,
         }
     }
@@ -159,6 +164,18 @@ impl FakeForge {
     /// The open pull requests `open_prs` answers with.
     pub fn open(mut self, prs: Vec<OpenPr>) -> Self {
         self.open = prs;
+        self
+    }
+
+    /// The pull requests `list_prs` answers with.
+    pub fn listing(mut self, prs: Vec<PrSummary>) -> Self {
+        self.listed = prs;
+        self
+    }
+
+    /// The state `pr_state` answers with.
+    pub fn in_state(mut self, state: PrState) -> Self {
+        self.state = state;
         self
     }
 
@@ -277,6 +294,37 @@ impl Forge for FakeForge {
     fn available(&self) -> Result<(), ForgeError> {
         self.calls.borrow_mut().push("available".into());
         self.check("available")
+    }
+}
+
+impl Pulls for FakeForge {
+    fn pr_state(&self, number: Option<u64>) -> Result<PrState, ForgeError> {
+        self.calls.borrow_mut().push(match number {
+            Some(n) => format!("state {n}"),
+            None => "state".into(),
+        });
+        self.check("state")?;
+        Ok(self.state.clone())
+    }
+
+    fn list_prs(&self, filter: PrFilter) -> Result<Vec<PrSummary>, ForgeError> {
+        self.calls.borrow_mut().push(format!("list {filter:?}"));
+        self.check("list")?;
+        Ok(self.listed.clone())
+    }
+
+    fn retarget_pr(&self, number: u64, base: &str) -> Result<(), ForgeError> {
+        self.calls
+            .borrow_mut()
+            .push(format!("retarget {number} {base}"));
+        self.check("retarget")
+    }
+
+    fn close_pr(&self, number: u64, comment: Option<&str>) -> Result<(), ForgeError> {
+        self.calls
+            .borrow_mut()
+            .push(format!("close {number} {}", comment.unwrap_or("-")));
+        self.check("close")
     }
 }
 
