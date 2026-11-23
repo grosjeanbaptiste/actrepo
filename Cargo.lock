@@ -5,8 +5,9 @@ version = 4
 [[package]]
 name = "actautoma"
 version = "0.1.0"
-source = "git+https://github.com/grosjeanbaptiste/actautoma?rev=72326d5fd897b2a12560723b3fbf98a09252e597#72326d5fd897b2a12560723b3fbf98a09252e597"
+source = "git+https://github.com/grosjeanbaptiste/actautoma?rev=b87c513ce9c931b2805dcccc008ae5ed0135a5fd#b87c513ce9c931b2805dcccc008ae5ed0135a5fd"
 dependencies = [
+ "actpath",
  "serde_json",
 ]
 
@@ -21,7 +22,7 @@ dependencies = [
 [[package]]
 name = "actit"
 version = "0.1.0"
-source = "git+ssh://git@github.com/grosjeanbaptiste/Actit.git?rev=5b0269ba4ec2ff2af47cf25be66b9902e13cb5c0#5b0269ba4ec2ff2af47cf25be66b9902e13cb5c0"
+source = "git+ssh://git@github.com/grosjeanbaptiste/Actit.git?rev=94d51c1e70693290a9769cf99060f1fe6022acf7#94d51c1e70693290a9769cf99060f1fe6022acf7"
 dependencies = [
  "actautoma",
  "serde",
@@ -42,6 +43,11 @@ dependencies = [
 name = "actname"
 version = "0.1.0"
 source = "git+ssh://git@github.com/grosjeanbaptiste/Actname.git?rev=dfc9f80b91b2e4df1c6bd3a077385df765cd43cf#dfc9f80b91b2e4df1c6bd3a077385df765cd43cf"
+
+[[package]]
+name = "actpath"
+version = "0.1.0"
+source = "git+ssh://git@github.com/grosjeanbaptiste/actpath.git?rev=145c049dc720fb6dbd7ee3a3483588788aed2bae#145c049dc720fb6dbd7ee3a3483588788aed2bae"
 
 [[package]]
 name = "actrepo"
