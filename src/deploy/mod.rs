@@ -1,6 +1,7 @@
 //! `actrepo deploy ENV TARGET [PATH]` (port of dotfiles `project deploy`).
 pub mod asc;
 pub mod brew;
+pub mod brew_beta;
 pub mod command;
 pub mod ctx;
 #[cfg(test)]
