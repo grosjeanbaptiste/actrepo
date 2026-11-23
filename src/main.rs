@@ -3,9 +3,9 @@
 use actautoma::{gh::Gh, process::ProcessRunner};
 use actit::forge_names::ForgeNames;
 use actrepo::{
-    audit, branch, build, delegate, deploy, device, docpaths, doctor, install, license, naming,
-    need, orchestrate, pin, pipeline, pr, push, registry, release, rename, root, run, scaffold,
-    workspace, worktree,
+    audit, branch, build, delegate, deploy, device, docpaths, doctor, hook, install, license,
+    naming, need, orchestrate, pin, pipeline, pr, push, registry, release, rename, root, run,
+    scaffold, workspace, worktree,
 };
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
@@ -152,7 +152,7 @@ enum Cmd {
         #[arg(long, short = 'y')]
         yes: bool,
     },
-    /// Pull requests: create one from the current branch, or merge one and update the local branches.
+    /// Pull requests: create one from the current branch, merge one and update the local branches, view, list, retarget or close.
     Pr {
         #[command(subcommand)]
         sub: PrCmd,
@@ -228,6 +228,11 @@ enum Cmd {
         #[command(subcommand)]
         sub: WsCmd,
     },
+    /// After a commit: pull the branch, push it. `install` puts the git hook in a repository.
+    Hook {
+        #[command(subcommand)]
+        sub: HookCmd,
+    },
     /// Linked worktrees: remove the ones whose branch is merged.
     Worktree {
         #[command(subcommand)]
@@ -267,6 +272,22 @@ enum Cmd {
     /// any other command goes to `dotfiles project` (list, status, pr, doctor, …).
     #[command(external_subcommand)]
     Other(Vec<String>),
+}
+
+#[derive(Subcommand)]
+enum HookCmd {
+    /// Write the post-commit hook in the repository of DIR (never replaces another hook).
+    Install {
+        #[arg(default_value = ".")]
+        dir: String,
+        /// Say what would be written; touch nothing.
+        #[arg(long, short = 'n')]
+        dry_run: bool,
+    },
+    /// What the hook calls: start `hook sync` in the background and return at once.
+    Run,
+    /// Fast-forward the current branch from origin and push it, now, in the foreground.
+    Sync,
 }
 
 #[derive(Subcommand)]
@@ -310,6 +331,34 @@ enum PrCmd {
         #[arg(long, short = 'y')]
         yes: bool,
     },
+    /// Show a PR: title, branches, author, state and mergeability.
+    View {
+        /// PR number; the PR of the current branch when omitted.
+        number: Option<u64>,
+    },
+    /// List PRs, one line each.
+    List {
+        /// open, closed, merged or all.
+        #[arg(long, value_enum, default_value = "open")]
+        state: PrStateArg,
+    },
+    /// Change the base branch of a PR.
+    Retarget { number: u64, base: String },
+    /// Close a PR without merging it.
+    Close {
+        number: u64,
+        /// Comment left on the PR when it is closed.
+        #[arg(long)]
+        comment: Option<String>,
+    },
+}
+
+#[derive(Clone, Copy, clap::ValueEnum)]
+enum PrStateArg {
+    Open,
+    Closed,
+    Merged,
+    All,
 }
 
 #[derive(Subcommand)]
@@ -346,6 +395,22 @@ fn main() -> Result<()> {
             PrCmd::Merge { number, yes } => {
                 pr::command::run_merge(&pr::merge::Opts { number, yes })
             }
+            PrCmd::View { number } => pr::command::run_view(number),
+            PrCmd::List { state } => pr::command::run_list(match state {
+                PrStateArg::Open => actautoma::pulls::PrFilter::Open,
+                PrStateArg::Closed => actautoma::pulls::PrFilter::Closed,
+                PrStateArg::Merged => actautoma::pulls::PrFilter::Merged,
+                PrStateArg::All => actautoma::pulls::PrFilter::All,
+            }),
+            PrCmd::Retarget { number, base } => pr::command::run_retarget(number, &base),
+            PrCmd::Close { number, comment } => pr::command::run_close(number, comment.as_deref()),
+        },
+        Cmd::Hook { sub } => match sub {
+            HookCmd::Install { dir, dry_run } => {
+                hook::command::run_install(Path::new(&dir), dry_run)
+            }
+            HookCmd::Run => hook::command::run_detached(),
+            HookCmd::Sync => hook::command::run_sync(),
         },
         Cmd::Worktree { sub } => match sub {
             WtCmd::List { json, owners } => worktree::command::run_list(json, owners),

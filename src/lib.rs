@@ -10,6 +10,7 @@ pub mod docpaths;
 pub mod doctor;
 #[cfg(test)]
 pub mod fakes;
+pub mod hook;
 pub mod install;
 pub mod kind;
 pub mod license;

@@ -44,8 +44,14 @@ actrepo rename-branch [PATH] [--from master] [--to main] [--dry-run] [--delete-o
 actrepo push [--dir PATH] [--dry-run] [--yes]      # push every nested repo that is clean and ahead; asks first
 actrepo pr create [--base B] [--title T] [--body D]    # PR for the current branch; title/description asked on stdin if not given
 actrepo pr merge [N] [--yes]                           # merge commit (a CONFLICTING branch first gets the base merged into it; unresolvable conflicts are refused), branch deleted, base fast-forwarded locally, then, only once the head is verified contained in origin/BASE: the clean worktree holding it, the local branch and a leftover remote branch removed (a worktree with changes is kept, with a warning)
+actrepo pr view [N]                                    # title, branches, author, state and mergeability of a PR (the current branch's when N is omitted)
+actrepo pr list [--state open|closed|merged|all]       # one line per PR; open by default
+actrepo pr retarget N BASE                             # change the base branch of a PR
+actrepo pr close N [--comment C]                       # close a PR without merging it
 actrepo worktree list [--json] [--owners]               # worktrees of the repository here: path, branch, main, detached, prunable; --owners adds the live agent sessions working in each (needs `actsessions` with `list --json`)
 actrepo worktree prune [--base main] [-n]               # remove each clean worktree whose pushed branch is contained in origin/BASE, and the branch; `actrepo pr merge` runs it
+actrepo hook install [DIR] [-n]                      # write the post-commit hook (never replaces another one); each commit then pulls (fast-forward) and pushes the branch in the background, log in $XDG_STATE_HOME/actrepo/hook.log; the default branch, a detached HEAD, a repository without origin and the emvi repositories are skipped; never a force, never --no-verify
+actrepo hook sync                                      # the same pull and push, now, in the foreground
 actrepo workspace list | status | push [-n]            # folders of the nearest *.code-workspace ($DOTFILES_WORKSPACE_FILE overrides)
 actrepo workspace add NAME [--clone URL | --init TYPE] # adopt ./NAME, or clone / scaffold it first
 actrepo workspace remove NAME                          # forget the folder; the directory stays
