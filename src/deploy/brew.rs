@@ -1,13 +1,17 @@
 //! Homebrew: bump the cask to the hosted artifact (the URL must already serve the built `.app`).
+use super::brew_release;
 use super::ctx::Ctx;
 use super::stores;
 use super::target::Env;
 use super::tool::plain;
 use anyhow::{Context, Result, bail};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
-/// prod bumps the stable cask, test the `@beta` one.
+/// prod bumps the stable cask, test the `@beta` one; test with `BREW_DMG` publishes a beta prerelease instead.
 pub fn update(c: &mut Ctx) -> Result<()> {
+    if c.env == Env::Test && c.vars.var("BREW_DMG").is_some() {
+        return brew_release::publish(c);
+    }
     let Some(url) = c.vars.var("BREW_APP_URL") else {
         bail!(
             "set BREW_APP_URL to the hosted macOS artifact (Homebrew references a URL, not a local file)."
@@ -30,6 +34,11 @@ pub fn update(c: &mut Ctx) -> Result<()> {
             .context("cannot resolve version (set BREW_VERSION).")?,
     };
     let channel = if c.env == Env::Prod { "stable" } else { "beta" };
+    bump(c, &version, &url, &root, channel)
+}
+
+/// Runs the cask bumper: `version` and `url` into the `channel` cask under `root`.
+pub fn bump(c: &mut Ctx, version: &str, url: &str, root: &Path, channel: &str) -> Result<()> {
     let py = stores::python(c.vars, c.tool, c.err)?.display().to_string();
     let script = stores::scripts_dir(c.vars)
         .join("update_brew.py")
@@ -38,9 +47,9 @@ pub fn update(c: &mut Ctx) -> Result<()> {
     let args = [
         script.as_str(),
         "--version",
-        &version,
+        version,
         "--app-url",
-        &url,
+        url,
         "--brew-root",
         &root.display().to_string(),
         "--channel",
