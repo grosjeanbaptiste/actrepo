@@ -8,6 +8,23 @@ Manage git repositories by reusing what exists:
 - **Prerequisites:** `git` and `gh` on `PATH`; templates are read from `~/Source/dotfiles/project-templates` (`PROJECT_REPO_ROOT` / `DOTFILES_REPO_ROOT` override the root).
 - **actit** (Rust library, pinned by commit) checks that the name is free on GitHub, under any owner, through `gh`.
 
+## Contents
+
+- [How it works](#how-it-works)
+- [Install](#install)
+- [Usage](#usage)
+- [Checks](#checks)
+
+## How it works
+
+```mermaid
+flowchart LR
+    actrepo["actrepo"] --> actname["actname: names the repository"]
+    actrepo --> scaffold["src/scaffold/: mkdir, git init, templates, commit, private GitHub repo via gh"]
+    actrepo --> actit["actit: name free on GitHub?"]
+    actrepo -. "tex, docker, db, redis, flutter-device" .-> dot["dotfiles project"]
+```
+
 ## Install
 
 Needs Rust 1.85 or newer, SSH access to GitHub (the actname and actit libraries are
