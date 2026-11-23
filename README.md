@@ -8,6 +8,23 @@ Manage git repositories by reusing what exists:
 - **Prerequisites:** `git` and `gh` on `PATH`; templates are read from `~/Source/dotfiles/project-templates` (`PROJECT_REPO_ROOT` / `DOTFILES_REPO_ROOT` override the root).
 - **actit** (Rust library, pinned by commit) checks that the name is free on GitHub, under any owner, through `gh`.
 
+## Contents
+
+- [How it works](#how-it-works)
+- [Install](#install)
+- [Usage](#usage)
+- [Checks](#checks)
+
+## How it works
+
+```mermaid
+flowchart LR
+    actrepo["actrepo"] --> actname["actname: names the repository"]
+    actrepo --> scaffold["src/scaffold/: mkdir, git init, templates, commit, private GitHub repo via gh"]
+    actrepo --> actit["actit: name free on GitHub?"]
+    actrepo -. "tex, docker, db, redis, flutter-device" .-> dot["dotfiles project"]
+```
+
 ## Install
 
 Needs Rust 1.85 or newer, SSH access to GitHub (the actname and actit libraries are
@@ -42,6 +59,7 @@ actrepo rename OWNER/OLD NEW [--dir DIR] [--into PARENT] [--local-only] [--dry-r
 actrepo move DIR --into PARENT [--fleet DIR]... [--dry-run]   # a folder and every repository under it (worktrees included) moved in one step; repos found by scanning, every path written in them corrected (actautoma move)
 actrepo rename-branch [PATH] [--from master] [--to main] [--dry-run] [--delete-old] [--rewrite]   # default branch, local + GitHub; --rewrite edits the references in tracked files (all of `.github/`, `origin/OLD`, `heads/OLD`, "OLD branch" elsewhere), the rest stays a `warn:` line; nothing is committed
 actrepo push [--dir PATH] [--dry-run] [--yes]      # push every nested repo that is clean and ahead; asks first
+actrepo sync [DIR] [-n]                                 # every branch of every repo under DIR: push what is ahead, fast-forward what is behind (fetch first), report diverged, dirty and upstream-less branches; one failure never stops the others, exit non-zero when any step failed or needs a human; the default branch is never pushed; -n prints the plan only
 actrepo pr create [--base B] [--title T] [--body D]    # PR for the current branch; title/description asked on stdin if not given
 actrepo pr merge [N] [--yes]                           # merge commit (a CONFLICTING branch first gets the base merged into it; unresolvable conflicts are refused), branch deleted, base fast-forwarded locally, then, only once the head is verified contained in origin/BASE: the clean worktree holding it, the local branch and a leftover remote branch removed (a worktree with changes is kept, with a warning)
 actrepo pr view [N]                                    # title, branches, author, state and mergeability of a PR (the current branch's when N is omitted)
@@ -52,6 +70,7 @@ actrepo worktree list [--json] [--owners]               # worktrees of the repos
 actrepo worktree prune [--base main] [-n]               # remove each clean worktree whose pushed branch is contained in origin/BASE, and the branch; `actrepo pr merge` runs it
 actrepo hook install [DIR] [-n]                      # write the post-commit hook (never replaces another one); each commit then pulls (fast-forward) and pushes the branch in the background, log in $XDG_STATE_HOME/actrepo/hook.log; the default branch, a detached HEAD, a repository without origin and the emvi repositories are skipped; never a force, never --no-verify
 actrepo hook sync                                      # the same pull and push, now, in the foreground
+actrepo apply [PATH]                                   # in a git repository it also writes the post-commit hook (report line `post-commit hook`; `check` and `apply --diff` only report it)
 actrepo workspace list | status | push [-n]            # folders of the nearest *.code-workspace ($DOTFILES_WORKSPACE_FILE overrides)
 actrepo workspace add NAME [--clone URL | --init TYPE] # adopt ./NAME, or clone / scaffold it first
 actrepo workspace remove NAME                          # forget the folder; the directory stays

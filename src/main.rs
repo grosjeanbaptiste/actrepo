@@ -3,9 +3,9 @@
 use actautoma::{gh::Gh, process::ProcessRunner};
 use actit::forge_names::ForgeNames;
 use actrepo::{
-    audit, branch, build, delegate, deploy, device, doctor, hook, install, license, naming, need,
-    orchestrate, pin, pipeline, pr, push, registry, release, rename, root, run, scaffold,
-    workspace, worktree,
+    audit, branch, build, delegate, deploy, device, docpaths, doctor, hook, install, license,
+    naming, need, orchestrate, pin, pipeline, pr, push, registry, release, rename, root, run,
+    scaffold, sync, workspace, worktree,
 };
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
@@ -83,6 +83,14 @@ enum Cmd {
         #[arg(default_value = ".")]
         path: String,
     },
+    /// Check, or with --write fix, the Path column of markdown tables of repositories against the registry.
+    DocsPaths {
+        #[arg(required = true)]
+        files: Vec<std::path::PathBuf>,
+        /// Rewrite the stale paths instead of failing on them.
+        #[arg(long)]
+        write: bool,
+    },
     /// Rename a repository's default branch, locally and on GitHub (master -> main).
     RenameBranch {
         #[arg(default_value = ".")]
@@ -148,6 +156,14 @@ enum Cmd {
         /// Push without asking.
         #[arg(long, short = 'y')]
         yes: bool,
+    },
+    /// Settle every branch of every repository under DIR: push what is ahead, fast-forward what is behind, report what diverged.
+    Sync {
+        #[arg(default_value = ".")]
+        dir: String,
+        /// Print the plan; touch nothing.
+        #[arg(long, short = 'n')]
+        dry_run: bool,
     },
     /// Pull requests: create one from the current branch, merge one and update the local branches, view, list, retarget or close.
     Pr {
@@ -409,6 +425,16 @@ fn main() -> Result<()> {
             HookCmd::Run => hook::command::run_detached(),
             HookCmd::Sync => hook::command::run_sync(),
         },
+        Cmd::Sync { dir, dry_run } => {
+            let (mut out, mut err) = (std::io::stdout().lock(), std::io::stderr().lock());
+            sync::run::run(
+                Path::new(&dir),
+                dry_run,
+                &scaffold::native::Process,
+                &mut out,
+                &mut err,
+            )
+        }
         Cmd::Worktree { sub } => match sub {
             WtCmd::List { json, owners } => worktree::command::run_list(json, owners),
             WtCmd::Prune { base, dry_run } => worktree::command::run_prune(&base, dry_run),
@@ -532,6 +558,18 @@ fn main() -> Result<()> {
                 &mut std::io::stdin().lock(),
                 &mut out,
                 &mut err,
+            )
+        }
+        Cmd::DocsPaths { files, write } => {
+            let home = std::env::var("HOME").context("HOME is not set")?;
+            let file = registry::file::path(|k| std::env::var(k).ok())?;
+            let entries = registry::file::read(&file)?;
+            docpaths::command::run(
+                &files,
+                write,
+                &entries,
+                Path::new(&home),
+                &mut std::io::stdout().lock(),
             )
         }
         Cmd::License { path } => {

@@ -14,7 +14,12 @@ fn sources(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
 }
 
 fn spawns_gh(text: &str) -> bool {
-    [r#"Command::new("gh")"#, r#".run("gh""#, r#"program: "gh""#]
+    [
+        r#"Command::new("gh")"#,
+        r#".run("gh""#,
+        r#"program: "gh""#,
+        r#"plain("gh""#,
+    ]
         .iter()
         .any(|p| text.contains(p))
         // `exec.run(\n "gh", ...)` split over lines by rustfmt

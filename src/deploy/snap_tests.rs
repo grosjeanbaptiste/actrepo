@@ -24,6 +24,10 @@ fn with_secret(secret: Option<&str>) -> Fake {
     Fake { captures: vec![("dotfiles".into(), "secret".into(), secret.map(String::from))], ..Fake::default() }
 }
 
+fn with_actesskey(secret: Option<&str>) -> Fake {
+    Fake { captures: vec![("actesskey".into(), "get".into(), secret.map(String::from))], ..Fake::default() }
+}
+
 const CRED: [(&str, &str); 1] = [("SNAPCRAFT_STORE_CREDENTIALS", "tok")];
 
 #[test]
@@ -54,11 +58,59 @@ fn credentials_come_from_the_secret_store_when_the_environment_has_none() {
 }
 
 #[test]
+fn actesskey_answers_first_and_dotfiles_is_not_asked() {
+    let d = project(true);
+    let fake = Fake {
+        captures: vec![
+            ("actesskey".into(), "get".into(), Some("from-actesskey".into())),
+            ("dotfiles".into(), "secret".into(), Some("from-dotfiles".into())),
+        ],
+        ..Fake::default()
+    };
+    let (r, t) = go(d.path(), Env::Prod, &[], fake);
+    assert!(r.is_ok(), "{}", message(&r));
+    assert_eq!(t.runs()[0].env, [("SNAPCRAFT_STORE_CREDENTIALS".to_string(), "from-actesskey".to_string())]);
+    let asked = t.captured.borrow().clone();
+    assert_eq!(asked.len(), 1);
+    assert_eq!(asked[0].args, ["get", "snapcraft-store-credentials"]);
+}
+
+#[test]
+fn dotfiles_answers_while_actesskey_is_absent_or_has_no_such_secret() {
+    let d = project(true);
+    let absent = Fake {
+        missing: vec!["actesskey".into()],
+        captures: vec![("dotfiles".into(), "secret".into(), Some("from-dotfiles".into()))],
+        ..Fake::default()
+    };
+    let empty = Fake {
+        captures: vec![
+            ("actesskey".into(), "get".into(), Some(String::new())),
+            ("dotfiles".into(), "secret".into(), Some("from-dotfiles".into())),
+        ],
+        ..Fake::default()
+    };
+    let refused = Fake {
+        captures: vec![
+            ("actesskey".into(), "get".into(), None),
+            ("dotfiles".into(), "secret".into(), Some("from-dotfiles".into())),
+        ],
+        ..Fake::default()
+    };
+    for fake in [absent, empty, refused] {
+        let (r, t) = go(d.path(), Env::Prod, &[], fake);
+        assert!(r.is_ok(), "{}", message(&r));
+        assert_eq!(t.runs()[0].env, [("SNAPCRAFT_STORE_CREDENTIALS".to_string(), "from-dotfiles".to_string())]);
+    }
+}
+
+#[test]
 fn no_credentials_anywhere_gives_the_enrolment_command() {
     let d = project(true);
-    for fake in [with_secret(None), with_secret(Some(""))] {
+    let fakes = [with_secret(None), with_secret(Some("")), with_actesskey(None), Fake::default()];
+    for fake in fakes {
         let (r, t) = go(d.path(), Env::Prod, &[], fake);
-        assert_eq!(message(&r), "no Snap Store credentials — enroll with:\n  snapcraft export-login - | dotfiles secret add snapcraft-store-credentials");
+        assert_eq!(message(&r), "no Snap Store credentials — enroll with:\n  snapcraft export-login - | actesskey add snapcraft-store-credentials");
         assert!(t.runs().is_empty());
     }
 }
