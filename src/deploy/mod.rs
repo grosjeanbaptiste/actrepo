@@ -3,6 +3,7 @@ pub mod asc;
 pub mod brew;
 pub mod brew_beta;
 pub mod brew_release;
+pub mod brew_steps;
 pub mod command;
 pub mod ctx;
 #[cfg(test)]
