@@ -46,6 +46,15 @@ pub fn plan(branches: &[Branch]) -> Vec<Step> {
     branches.iter().filter_map(step).collect()
 }
 
+/// Keeps what only reads from the remote: pulls, and divergences (reported, never acted on).
+/// A session start uses it so that nothing is pushed through a gate.
+pub fn pull_only(steps: Vec<Step>) -> Vec<Step> {
+    steps
+        .into_iter()
+        .filter(|s| matches!(s, Step::Pull { .. } | Step::Diverged { .. }))
+        .collect()
+}
+
 fn step(b: &Branch) -> Option<Step> {
     let (repo, branch) = (b.repo.clone(), b.name.clone());
     let skip = |why: &str| {

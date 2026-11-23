@@ -188,3 +188,28 @@ fn a_clean_checked_out_branch_that_is_behind_is_pulled() {
     );
     assert_eq!(git(&f.work, &["rev-parse", "main"]), remote_sha(&f, "main"));
 }
+
+#[test]
+fn pull_only_pulls_the_behind_branches_and_pushes_nothing() {
+    let f = fx();
+    let pushed_before: Vec<String> = ["p1", "p2", "p3"]
+        .iter()
+        .map(|b| remote_sha(&f, b))
+        .collect();
+    let o = sync(&f, &["--pull-only"]);
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    for n in ["l1", "l2", "l3"] {
+        assert_eq!(
+            git(&f.work, &["rev-parse", n]),
+            remote_sha(&f, n),
+            "{n} pulled"
+        );
+    }
+    let pushed_after: Vec<String> = ["p1", "p2", "p3"]
+        .iter()
+        .map(|b| remote_sha(&f, b))
+        .collect();
+    assert_eq!(pushed_before, pushed_after, "nothing may be pushed");
+    let t = out(&sync(&f, &["--pull-only", "--dry-run"]));
+    assert!(!t.contains(": push "), "{t}");
+}

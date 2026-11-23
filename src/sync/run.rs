@@ -1,7 +1,7 @@
 //! `actrepo sync [--dry-run] [DIR]`: fetch, read every branch of every repository, plan, then act.
 use super::{
     exec::execute,
-    plan::{Branch, plan},
+    plan::{Branch, plan, pull_only},
     read::{Facts, parse},
 };
 use crate::push::rows::collect;
@@ -61,6 +61,7 @@ fn branches(exec: &impl Exec, repo: &Path, err: &mut impl Write) -> Result<Vec<B
 pub fn run(
     dir: &Path,
     dry_run: bool,
+    pull_only_mode: bool,
     exec: &impl Exec,
     out: &mut impl Write,
     err: &mut impl Write,
@@ -74,7 +75,11 @@ pub fn run(
     for row in &rows {
         all.extend(branches(exec, &row.repo, err).with_context(|| row.repo.display().to_string())?);
     }
-    let steps = plan(&all);
+    let steps = if pull_only_mode {
+        pull_only(plan(&all))
+    } else {
+        plan(&all)
+    };
     if dry_run {
         for s in &steps {
             writeln!(out, "plan {}", s.line())?;
