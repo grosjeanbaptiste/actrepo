@@ -167,6 +167,9 @@ enum Cmd {
         /// Only fast-forward what is behind (nothing is pushed): what a session start runs.
         #[arg(long)]
         pull_only: bool,
+        /// Only the repository containing DIR, nothing below it is scanned (fast: for a session start).
+        #[arg(long)]
+        here: bool,
     },
     /// Pull requests: create one from the current branch, merge one and update the local branches, view, list, retarget or close.
     Pr {
@@ -432,12 +435,16 @@ fn main() -> Result<()> {
             dir,
             dry_run,
             pull_only,
+            here,
         } => {
             let (mut out, mut err) = (std::io::stdout().lock(), std::io::stderr().lock());
             sync::run::run(
                 Path::new(&dir),
-                dry_run,
-                pull_only,
+                sync::run::Opts {
+                    dry_run,
+                    pull_only,
+                    here,
+                },
                 &scaffold::native::Process,
                 &mut out,
                 &mut err,

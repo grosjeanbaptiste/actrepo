@@ -213,3 +213,49 @@ fn pull_only_pulls_the_behind_branches_and_pushes_nothing() {
     let t = out(&sync(&f, &["--pull-only", "--dry-run"]));
     assert!(!t.contains(": push "), "{t}");
 }
+
+fn sync_in(dir: &Path, args: &[&str]) -> Output {
+    ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
+        .arg("sync")
+        .args(args)
+        .arg(dir)
+        .output())
+}
+
+#[test]
+fn here_works_from_a_subfolder_and_pulls_only_the_enclosing_repository() {
+    let f = fx();
+    let sub = f.work.join("sub");
+    ok(fs::create_dir_all(&sub));
+    let nested = f.work.join("nested");
+    ok(fs::create_dir_all(&nested));
+    git(&nested, &["init", "-q", "-b", "main"]);
+    commit(&nested, "n");
+    let o = sync_in(&sub, &["--pull-only", "--here"]);
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    for n in ["l1", "l2", "l3"] {
+        assert_eq!(
+            git(&f.work, &["rev-parse", n]),
+            remote_sha(&f, n),
+            "{n} pulled"
+        );
+    }
+    let plan = out(&sync_in(&sub, &["--here", "--dry-run"]));
+    assert!(
+        !plan.contains("nested"),
+        "nothing below the repository is scanned: {plan}"
+    );
+    let scanned = out(&sync_in(&f.work, &["--dry-run"]));
+    assert!(
+        scanned.contains("nested"),
+        "without --here the nested repository is planned: {scanned}"
+    );
+}
+
+#[test]
+fn here_outside_a_repository_succeeds_and_says_so() {
+    let d = ok(tempfile::tempdir());
+    let o = sync_in(d.path(), &["--pull-only", "--here"]);
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    assert!(out(&o).contains("not in a git repository"), "{}", out(&o));
+}

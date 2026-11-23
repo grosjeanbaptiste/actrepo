@@ -89,6 +89,19 @@ fn relative(target: &Path, repo: &Path) -> String {
     }
 }
 
+/// The repository that contains `target`, or `None` outside any repository. Scans nothing.
+pub fn enclosing(exec: &impl Exec, target: &Path) -> Result<Option<Row>> {
+    let target = target
+        .canonicalize()
+        .with_context(|| format!("{}: no such directory", target.display()))?;
+    let Ok(top) = git(exec, &target, &["rev-parse", "--show-toplevel"]) else {
+        return Ok(None); // not inside a repository: nothing to do, not a failure
+    };
+    let top = PathBuf::from(top.trim());
+    let rel = relative(&target, &top);
+    classify(exec, &top, &rel).map(Some)
+}
+
 /// Repositories at and under `target`, the enclosing repository first, outer before inner.
 pub fn collect(exec: &impl Exec, target: &Path, warnings: &mut Vec<String>) -> Result<Vec<Row>> {
     let target = target
