@@ -101,9 +101,11 @@ pub fn run(
                 t.name(),
                 root.display()
             ),
-            (true, Choice::All) => {
-                format!("Push the all store page from {}/stores?", root.display())
-            }
+            (true, choice @ (Choice::All | Choice::Mobile)) => format!(
+                "Push the {} store page from {}/stores?",
+                choice_name(choice),
+                root.display()
+            ),
             (false, choice) => format!(
                 "Deploy '{}' to '{}' from {}?",
                 choice_name(choice),
@@ -144,6 +146,7 @@ pub fn run(
 fn choice_name(choice: Choice) -> &'static str {
     match choice {
         Choice::All => "all",
+        Choice::Mobile => "mobile",
         Choice::One(t) => t.name(),
     }
 }

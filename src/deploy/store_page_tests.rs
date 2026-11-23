@@ -45,7 +45,7 @@ fn sa(d: &Path) -> String {
 #[test]
 fn only_ios_and_android_have_a_store_page() {
     let d = project(true);
-    for (choice, name) in [(Choice::One(Target::Web), "web"), (Choice::One(Target::Mas), "mas"), (Choice::All, "all")] {
+    for (choice, name) in [(Choice::One(Target::Web), "web"), (Choice::One(Target::Mas), "mas"), (Choice::All, "all"), (Choice::Mobile, "mobile")] {
         let o = go(d.path(), choice, false, &[], Fake::default());
         assert_eq!(message(&o.result), format!("--store-page applies to ios and android, not '{name}'."));
     }
