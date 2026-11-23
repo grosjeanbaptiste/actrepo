@@ -11,6 +11,7 @@ fn b(name: &str, ahead: u32, behind: u32) -> Branch {
         checked_out: false,
         dirty: false,
         default_branch: false,
+        elsewhere: None,
     }
 }
 
@@ -168,4 +169,17 @@ fn pull_only_keeps_pulls_and_divergences_and_drops_pushes_and_skips() {
     assert_eq!(kept.len(), 2, "{kept:?}");
     assert!(matches!(kept[0], Step::Pull { .. }), "{kept:?}");
     assert!(matches!(kept[1], Step::Diverged { .. }), "{kept:?}");
+}
+
+#[test]
+fn a_pull_of_a_branch_checked_out_in_another_worktree_is_skipped_with_its_path() {
+    let mut other = b("a", 0, 3);
+    other.elsewhere = Some(PathBuf::from("/r/other"));
+    let steps = plan(&[other]);
+    assert_eq!(steps.len(), 1);
+    let line = steps[0].line();
+    assert!(
+        matches!(steps[0], Step::Skip { .. }) && line.contains("checked out in /r/other"),
+        "{line}"
+    );
 }

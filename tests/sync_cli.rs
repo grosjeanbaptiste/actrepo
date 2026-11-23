@@ -259,3 +259,33 @@ fn here_outside_a_repository_succeeds_and_says_so() {
     assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
     assert!(out(&o).contains("not in a git repository"), "{}", out(&o));
 }
+
+#[test]
+fn pull_only_notes_a_diverged_branch_and_still_succeeds_while_plain_sync_fails() {
+    let f = fx();
+    git(&f.work, &["checkout", "-q", "-b", "dv", "main"]);
+    commit(&f.work, "local-dv");
+    git(&f.work, &["push", "-q", "-u", "origin", "dv"]);
+    let other = f.work.parent().map(|p| p.join("other")).unwrap_or_default();
+    git(&other, &["fetch", "-q", "origin"]);
+    git(&other, &["checkout", "-q", "-B", "dv", "origin/dv"]);
+    commit(&other, "remote-dv");
+    git(&other, &["push", "-q", "origin", "dv"]);
+    git(&f.work, &["reset", "-q", "--soft", "HEAD~1"]);
+    git(&f.work, &["commit", "-q", "-m", "rewritten-dv"]);
+    git(&f.work, &["fetch", "-q", "origin"]);
+    git(&f.work, &["checkout", "-q", "main"]);
+    let o = sync(&f, &["--pull-only"]);
+    assert!(
+        o.status.success(),
+        "{}\n{}",
+        out(&o),
+        String::from_utf8_lossy(&o.stderr)
+    );
+    assert!(out(&o).contains("note"), "{}", out(&o));
+    assert!(out(&o).contains("dv: diverged"), "{}", out(&o));
+    assert!(
+        !sync(&f, &[]).status.success(),
+        "plain sync still needs a human"
+    );
+}

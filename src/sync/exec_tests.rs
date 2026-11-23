@@ -1,4 +1,4 @@
-use super::exec::execute;
+use super::exec::{execute, execute_noting};
 use super::plan::Step;
 use crate::scaffold::setup::Exec;
 use anyhow::Result;
@@ -151,4 +151,61 @@ fn an_empty_plan_succeeds_and_says_so() {
     let mut out = vec![];
     execute(&[], &Fake::default(), &mut out).unwrap_or_else(|e| panic!("{e}"));
     assert_eq!(text(out), "nothing to sync\n");
+}
+
+#[test]
+fn a_pull_fetches_the_branch_the_upstream_names_not_the_local_name() {
+    let f = Fake::default();
+    let step = Step::Pull {
+        repo: repo("a"),
+        branch: "docs/x".into(),
+        upstream: "origin/main".into(),
+        count: 2,
+        checked_out: false,
+    };
+    execute(&[step], &f, &mut vec![]).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(
+        f.calls.borrow().as_slice(),
+        ["/r/a git fetch origin main:docs/x"]
+    );
+}
+
+#[test]
+fn noting_reports_what_needs_a_human_but_does_not_fail_for_it() {
+    let f = Fake::default();
+    let steps = [
+        Step::Diverged {
+            repo: repo("a"),
+            branch: "x".into(),
+            ahead: 1,
+            behind: 1,
+        },
+        Step::Skip {
+            repo: repo("b"),
+            branch: "y".into(),
+            why: "dirty tree".into(),
+        },
+        pull("c", "z", false),
+    ];
+    let mut out = vec![];
+    execute_noting(&steps, &f, &mut out).unwrap_or_else(|e| panic!("{e}"));
+    let t = text(out);
+    assert!(t.contains("note /r/a x: diverged 1 ahead, 1 behind"), "{t}");
+    assert!(t.contains("note /r/b y: skip, dirty tree"), "{t}");
+    assert!(t.contains("ok   /r/c z: pull 2"), "{t}");
+}
+
+#[test]
+fn noting_still_fails_when_a_step_that_ran_failed() {
+    let f = Fake {
+        fail_on: Some("fetch"),
+        ..Fake::default()
+    };
+    let mut out = vec![];
+    let e = execute_noting(&[pull("c", "z", false)], &f, &mut out)
+        .err()
+        .map(|e| e.to_string())
+        .unwrap_or_default();
+    assert!(e.contains("1 of 1"), "{e}");
+    assert!(text(out).contains("FAIL /r/c z: pull 2"));
 }
