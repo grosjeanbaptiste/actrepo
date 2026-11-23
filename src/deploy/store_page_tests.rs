@@ -101,7 +101,7 @@ fn android_needs_a_package_then_a_service_account() {
     let o = go(d.path(), ANDROID, false, &[], Fake::default());
     assert_eq!(message(&o.result), "cannot resolve the Android package (set PLAY_PACKAGE_NAME).");
     let o = go(d.path(), ANDROID, false, &[("PLAY_PACKAGE_NAME", "com.x"), ("PLAY_SERVICE_ACCOUNT_PATH", "/nope.json")], Fake::default());
-    assert_eq!(message(&o.result), "no Play service account at /nope.json (dotfiles secret apply).");
+    assert_eq!(message(&o.result), "no Play service account at /nope.json (actesskey apply).");
 }
 
 #[test]

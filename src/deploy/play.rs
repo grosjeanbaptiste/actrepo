@@ -19,7 +19,7 @@ pub fn upload(c: &mut Ctx) -> Result<()> {
     );
     if !account.is_file() {
         bail!(
-            "no Play service account at {} (dotfiles secret apply).",
+            "no Play service account at {} (actesskey apply).",
             account.display()
         );
     }

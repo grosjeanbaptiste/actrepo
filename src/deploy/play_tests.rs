@@ -70,7 +70,7 @@ fn an_unresolvable_package_is_named() {
 fn a_missing_service_account_says_how_to_get_it() {
     let f = fx(true, false);
     let (r, t) = go(&f, Env::Prod, &[], Fake::default());
-    assert_eq!(message(&r), format!("no Play service account at {} (dotfiles secret apply).", f.sa));
+    assert_eq!(message(&r), format!("no Play service account at {} (actesskey apply).", f.sa));
     assert!(t.runs().is_empty());
 }
 
