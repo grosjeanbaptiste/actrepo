@@ -10,6 +10,7 @@ pub mod ctx;
 mod fake;
 pub mod find;
 pub mod macos_export;
+pub mod macos_notarize;
 pub mod msstore;
 pub mod native;
 pub mod play;
