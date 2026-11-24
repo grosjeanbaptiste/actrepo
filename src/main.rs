@@ -309,6 +309,12 @@ enum WtCmd {
         #[arg(long)]
         owners: bool,
     },
+    /// Create a worktree under .worktrees on a new branch cut from origin/BASE, tracking nothing.
+    New {
+        branch: String,
+        #[arg(long, default_value = "main")]
+        base: String,
+    },
     /// Remove each clean worktree whose pushed branch is contained in origin/BASE, and the branch.
     Prune {
         #[arg(long, default_value = "main")]
@@ -432,6 +438,7 @@ fn main() -> Result<()> {
         }
         Cmd::Worktree { sub } => match sub {
             WtCmd::List { json, owners } => worktree::command::run_list(json, owners),
+            WtCmd::New { branch, base } => worktree::command::run_new(&branch, &base),
             WtCmd::Prune { base, dry_run } => worktree::command::run_prune(&base, dry_run),
         },
         Cmd::Workspace { sub } => match sub {
