@@ -148,3 +148,50 @@ fn a_bare_unregistered_name_is_refused_naming_it() {
         text(&o.stderr)
     );
 }
+
+/// A linked worktree of `old` whose gitfile points nowhere: git fails after the folder has moved.
+fn with_broken_worktree(w: &World) {
+    let old = w.path("Source/old");
+    git(
+        &old,
+        &[
+            "-c",
+            "user.email=a@b",
+            "-c",
+            "user.name=n",
+            "commit",
+            "-q",
+            "--allow-empty",
+            "-m",
+            "init",
+        ],
+    );
+    git(&old, &["worktree", "add", "-q", "../old-wt", "-b", "wt"]);
+    ok(fs::write(
+        w.path("Source/old-wt/.git"),
+        format!("gitdir: {}\n", w.path("nowhere").display()),
+    ));
+}
+
+#[test]
+fn a_rename_failing_after_the_folder_moved_still_moves_the_registry_row() {
+    let w = World::new();
+    with_broken_worktree(&w);
+    let o = w.repo(&["rename", "me/old", "new", "--local-only"]);
+    assert!(!o.status.success(), "the git failure is still reported");
+    assert!(
+        text(&o.stderr).contains("gitfile") || text(&o.stderr).contains("git"),
+        "{}",
+        text(&o.stderr)
+    );
+    assert!(!w.path("Source/old").exists() && w.path("Source/new").is_dir());
+    let reg = ok(fs::read_to_string(w.path("machine/projects.txt")));
+    assert!(
+        reg.contains(&format!("new|{}", w.path("Source/new").display())),
+        "{reg}"
+    );
+    assert!(
+        !reg.contains("old|") && reg.contains("other|/x/other"),
+        "{reg}"
+    );
+}

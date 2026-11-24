@@ -1,6 +1,6 @@
 //! `actrepo rename`, wired to the real machine and, through actautoma, the hosting platform.
-use super::entry::renamed;
 use super::plan::{Machine, Request, build};
+use super::settle::settle;
 use super::slug::qualify;
 use crate::registry::file::{Entry, read, state_root};
 use crate::registry::scan::write_atomically;
@@ -107,20 +107,21 @@ pub fn run(
         println!("dry run: nothing was changed");
         return Ok(());
     }
-    let out = execute(&plan, &Gh::new(ProcessRunner), &ProcessRunner)?;
-    report(&plan, &out);
-    match renamed(&entries, &plan.old, &plan.new, &plan.new_dir()) {
-        Some(rows) => write_atomically(&file, &rows).with_context(|| {
-            format!(
-                "renamed everywhere, but the registry {} was not updated",
-                file.display()
-            )
-        })?,
-        None => eprintln!(
-            "warn: {} was not in the registry {}",
-            plan.old,
-            file.display()
-        ),
+    let executed = execute(&plan, &Gh::new(ProcessRunner), &ProcessRunner);
+    if let Ok(out) = &executed {
+        report(&plan, out);
     }
+    let warnings = settle(
+        &entries,
+        &plan.old,
+        &plan.new,
+        &plan.new_dir(),
+        executed.map(|_| ()).map_err(anyhow::Error::from),
+        &|p| p.is_dir(),
+        &mut |rows| {
+            write_atomically(&file, rows).with_context(|| format!("writing {}", file.display()))
+        },
+    )?;
+    warnings.iter().for_each(|w| eprintln!("warn: {w}"));
     Ok(())
 }
