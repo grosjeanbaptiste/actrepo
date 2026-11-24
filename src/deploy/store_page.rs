@@ -35,7 +35,7 @@ fn android(c: &mut Ctx, stores: &Path, dry_run: bool) -> Result<()> {
     );
     if !account.is_file() {
         bail!(
-            "no Play service account at {} (dotfiles secret apply).",
+            "no Play service account at {} (actesskey apply).",
             account.display()
         );
     }
@@ -80,6 +80,7 @@ pub fn push(c: &mut Ctx, choice: Choice, dry_run: bool) -> Result<()> {
             t.name()
         ),
         Choice::All => bail!("--store-page applies to ios and android, not 'all'."),
+        Choice::Mobile => bail!("--store-page applies to ios and android, not 'mobile'."),
     };
     let stores = c.root.join("stores");
     if !stores.is_dir() {

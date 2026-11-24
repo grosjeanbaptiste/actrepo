@@ -106,6 +106,7 @@ pub fn drive(
             root,
             vars: &vars,
             tool: &tool,
+            forge: &forge(),
             out: &mut out,
             err: &mut err,
         };
@@ -116,4 +117,9 @@ pub fn drive(
 
 pub fn message(r: &Result<()>) -> String {
     r.as_ref().err().map(|e| e.to_string()).unwrap_or_default()
+}
+
+/// A platform that records nothing and succeeds, for channels that never use it.
+pub fn forge() -> crate::fakes::FakeForge {
+    crate::fakes::FakeForge::pr("t", actautoma::forge::Mergeable::Mergeable)
 }

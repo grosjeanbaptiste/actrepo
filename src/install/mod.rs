@@ -30,12 +30,10 @@ pub fn run(
         None => root.clone(),
     };
     let from = from.to_string_lossy();
-    let mut args = vec![
-        "heavy", "run", "--", "cargo", "install", "--path", &from, "--locked",
-    ];
+    let mut args = vec!["run", "--", "cargo", "install", "--path", &from, "--locked"];
     args.extend(opts.bin.iter().flat_map(|b| ["--bin", b.as_str()]));
     args.extend(opts.force.then_some("--force"));
-    live.run("dotfiles", &args, None)
+    live.run("actqueue", &args, None)
         .with_context(|| format!("Cargo installation failed for {}", opts.name))?;
     let what = opts
         .bin

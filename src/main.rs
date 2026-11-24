@@ -3,9 +3,9 @@
 use actautoma::{gh::Gh, process::ProcessRunner};
 use actit::forge_names::ForgeNames;
 use actrepo::{
-    audit, branch, build, delegate, deploy, device, doctor, install, license, naming, need,
-    orchestrate, pin, pipeline, pr, push, registry, release, rename, root, run, scaffold,
-    workspace, worktree,
+    audit, branch, build, delegate, deploy, device, docpaths, doctor, hook, install, license,
+    naming, need, orchestrate, pin, pipeline, pr, push, registry, release, rename, root, run,
+    scaffold, sync, workspace, worktree,
 };
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
@@ -83,6 +83,14 @@ enum Cmd {
         #[arg(default_value = ".")]
         path: String,
     },
+    /// Check, or with --write fix, the Path column of markdown tables of repositories against the registry.
+    DocsPaths {
+        #[arg(required = true)]
+        files: Vec<std::path::PathBuf>,
+        /// Rewrite the stale paths instead of failing on them.
+        #[arg(long)]
+        write: bool,
+    },
     /// Rename a repository's default branch, locally and on GitHub (master -> main).
     RenameBranch {
         #[arg(default_value = ".")]
@@ -97,6 +105,11 @@ enum Cmd {
         /// Also delete the old branch on origin (irreversible).
         #[arg(long)]
         delete_old: bool,
+        /// Rewrite the references to the old name in the tracked files: every whole-word
+        /// match under `.github/`, and `origin/OLD`, `heads/OLD`, "OLD branch", "branch OLD"
+        /// elsewhere. Other lines are still listed as warnings.
+        #[arg(long)]
+        rewrite: bool,
     },
     /// Rename a repository everywhere: platform, origin, folder, written references, registry.
     Rename {
@@ -144,7 +157,21 @@ enum Cmd {
         #[arg(long, short = 'y')]
         yes: bool,
     },
-    /// Pull requests: create one from the current branch, or merge one and update the local branches.
+    /// Settle every branch of every repository under DIR: push what is ahead, fast-forward what is behind, report what diverged.
+    Sync {
+        #[arg(default_value = ".")]
+        dir: String,
+        /// Print the plan; touch nothing.
+        #[arg(long, short = 'n')]
+        dry_run: bool,
+        /// Only fast-forward what is behind (nothing is pushed): what a session start runs.
+        #[arg(long)]
+        pull_only: bool,
+        /// Only the repository containing DIR, nothing below it is scanned (fast: for a session start).
+        #[arg(long)]
+        here: bool,
+    },
+    /// Pull requests: create one from the current branch, merge one and update the local branches, view, list, retarget or close.
     Pr {
         #[command(subcommand)]
         sub: PrCmd,
@@ -189,7 +216,7 @@ enum Cmd {
     Deploy {
         /// prod | test
         env: String,
-        /// web | ios | android | mas | homebrew | windows | linux | all
+        /// web | ios | android | mas | homebrew | windows | linux | mobile | all
         target: String,
         /// Project directory.
         #[arg(default_value = ".")]
@@ -219,6 +246,11 @@ enum Cmd {
     Workspace {
         #[command(subcommand)]
         sub: WsCmd,
+    },
+    /// After a commit: pull the branch, push it. `install` puts the git hook in a repository.
+    Hook {
+        #[command(subcommand)]
+        sub: HookCmd,
     },
     /// Linked worktrees: remove the ones whose branch is merged.
     Worktree {
@@ -262,6 +294,22 @@ enum Cmd {
 }
 
 #[derive(Subcommand)]
+enum HookCmd {
+    /// Write the post-commit hook in the repository of DIR (never replaces another hook).
+    Install {
+        #[arg(default_value = ".")]
+        dir: String,
+        /// Say what would be written; touch nothing.
+        #[arg(long, short = 'n')]
+        dry_run: bool,
+    },
+    /// What the hook calls: start `hook sync` in the background and return at once.
+    Run,
+    /// Fast-forward the current branch from origin and push it, now, in the foreground.
+    Sync,
+}
+
+#[derive(Subcommand)]
 enum WtCmd {
     /// Worktrees of the repository in the current folder.
     List {
@@ -271,6 +319,12 @@ enum WtCmd {
         /// Add the live agent sessions working in each worktree (runs `actsessions list --json`).
         #[arg(long)]
         owners: bool,
+    },
+    /// Create a worktree under .worktrees on a new branch cut from origin/BASE, tracking nothing.
+    New {
+        branch: String,
+        #[arg(long, default_value = "main")]
+        base: String,
     },
     /// Remove each clean worktree whose pushed branch is contained in origin/BASE, and the branch.
     Prune {
@@ -302,6 +356,34 @@ enum PrCmd {
         #[arg(long, short = 'y')]
         yes: bool,
     },
+    /// Show a PR: title, branches, author, state and mergeability.
+    View {
+        /// PR number; the PR of the current branch when omitted.
+        number: Option<u64>,
+    },
+    /// List PRs, one line each.
+    List {
+        /// open, closed, merged or all.
+        #[arg(long, value_enum, default_value = "open")]
+        state: PrStateArg,
+    },
+    /// Change the base branch of a PR.
+    Retarget { number: u64, base: String },
+    /// Close a PR without merging it.
+    Close {
+        number: u64,
+        /// Comment left on the PR when it is closed.
+        #[arg(long)]
+        comment: Option<String>,
+    },
+}
+
+#[derive(Clone, Copy, clap::ValueEnum)]
+enum PrStateArg {
+    Open,
+    Closed,
+    Merged,
+    All,
 }
 
 #[derive(Subcommand)]
@@ -338,9 +420,45 @@ fn main() -> Result<()> {
             PrCmd::Merge { number, yes } => {
                 pr::command::run_merge(&pr::merge::Opts { number, yes })
             }
+            PrCmd::View { number } => pr::command::run_view(number),
+            PrCmd::List { state } => pr::command::run_list(match state {
+                PrStateArg::Open => actautoma::pulls::PrFilter::Open,
+                PrStateArg::Closed => actautoma::pulls::PrFilter::Closed,
+                PrStateArg::Merged => actautoma::pulls::PrFilter::Merged,
+                PrStateArg::All => actautoma::pulls::PrFilter::All,
+            }),
+            PrCmd::Retarget { number, base } => pr::command::run_retarget(number, &base),
+            PrCmd::Close { number, comment } => pr::command::run_close(number, comment.as_deref()),
         },
+        Cmd::Hook { sub } => match sub {
+            HookCmd::Install { dir, dry_run } => {
+                hook::command::run_install(Path::new(&dir), dry_run)
+            }
+            HookCmd::Run => hook::command::run_detached(),
+            HookCmd::Sync => hook::command::run_sync(),
+        },
+        Cmd::Sync {
+            dir,
+            dry_run,
+            pull_only,
+            here,
+        } => {
+            let (mut out, mut err) = (std::io::stdout().lock(), std::io::stderr().lock());
+            sync::run::run(
+                Path::new(&dir),
+                sync::run::Opts {
+                    dry_run,
+                    pull_only,
+                    here,
+                },
+                &scaffold::native::Process,
+                &mut out,
+                &mut err,
+            )
+        }
         Cmd::Worktree { sub } => match sub {
             WtCmd::List { json, owners } => worktree::command::run_list(json, owners),
+            WtCmd::New { branch, base } => worktree::command::run_new(&branch, &base),
             WtCmd::Prune { base, dry_run } => worktree::command::run_prune(&base, dry_run),
         },
         Cmd::Workspace { sub } => match sub {
@@ -428,7 +546,8 @@ fn main() -> Result<()> {
             to,
             dry_run,
             delete_old,
-        } => branch::command::run(&path, &from, &to, dry_run, delete_old),
+            rewrite,
+        } => branch::command::run(&path, &from, &to, dry_run, delete_old, rewrite),
         Cmd::Rename {
             slug,
             new,
@@ -461,6 +580,18 @@ fn main() -> Result<()> {
                 &mut std::io::stdin().lock(),
                 &mut out,
                 &mut err,
+            )
+        }
+        Cmd::DocsPaths { files, write } => {
+            let home = std::env::var("HOME").context("HOME is not set")?;
+            let file = registry::file::path(|k| std::env::var(k).ok())?;
+            let entries = registry::file::read(&file)?;
+            docpaths::command::run(
+                &files,
+                write,
+                &entries,
+                Path::new(&home),
+                &mut std::io::stdout().lock(),
             )
         }
         Cmd::License { path } => {

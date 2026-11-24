@@ -11,16 +11,11 @@ pub fn upload(c: &mut Ctx) -> Result<()> {
     }
     let credentials = match c.vars.var("SNAPCRAFT_STORE_CREDENTIALS") {
         Some(v) => Some(v),
-        None => {
-            let args = ["secret", "get", "snapcraft-store-credentials"].map(String::from);
-            c.tool
-                .capture(&plain("dotfiles", &args))?
-                .filter(|v| !v.is_empty())
-        }
+        None => stored(c)?,
     };
     let Some(credentials) = credentials else {
         bail!(
-            "no Snap Store credentials — enroll with:\n  snapcraft export-login - | dotfiles secret add snapcraft-store-credentials"
+            "no Snap Store credentials — enroll with:\n  snapcraft export-login - | actesskey add snapcraft-store-credentials"
         );
     };
     let build = c.root.join("build");
@@ -43,6 +38,22 @@ pub fn upload(c: &mut Ctx) -> Result<()> {
             ..plain("snapcraft", &args)
         })
         .context("uploading the snap")
+}
+
+/// The enrolled credentials: `actesskey get` first, then `dotfiles secret get` while the
+/// secrets are still migrating. An empty answer counts as none.
+fn stored(c: &mut Ctx) -> Result<Option<String>> {
+    if c.tool.on_path("actesskey") {
+        let args = ["get", "snapcraft-store-credentials"].map(String::from);
+        let found = c.tool.capture(&plain("actesskey", &args))?;
+        if let Some(v) = found.filter(|v| !v.is_empty()) {
+            return Ok(Some(v));
+        }
+    }
+    let args = ["secret", "get", "snapcraft-store-credentials"].map(String::from);
+    Ok(c.tool
+        .capture(&plain("dotfiles", &args))?
+        .filter(|v| !v.is_empty()))
 }
 
 #[cfg(test)]

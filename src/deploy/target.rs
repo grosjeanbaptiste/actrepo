@@ -23,6 +23,8 @@ pub enum Target {
 pub enum Choice {
     One(Target),
     All,
+    /// Phones and tablets (ios, android) plus every desktop target (mas, homebrew, windows, linux).
+    Mobile,
 }
 
 /// The targets `all` fans out to, in order.
@@ -69,14 +71,19 @@ impl Target {
 
 impl Choice {
     pub fn parse(s: &str) -> Result<Choice> {
-        if s == "all" {
-            return Ok(Choice::All);
+        match s {
+            "all" => return Ok(Choice::All),
+            "mobile" => return Ok(Choice::Mobile),
+            _ => {}
         }
         match CONCRETE.into_iter().find(|t| t.name() == s) {
             Some(t) => Ok(Choice::One(t)),
             None => {
                 let names: Vec<&str> = CONCRETE.iter().map(|t| t.name()).collect();
-                bail!("invalid target '{s}' — expected: {} | all", names.join(" "))
+                bail!(
+                    "invalid target '{s}' — expected: {} | mobile | all",
+                    names.join(" ")
+                )
             }
         }
     }
@@ -84,6 +91,7 @@ impl Choice {
     pub fn targets(self) -> Vec<Target> {
         match self {
             Choice::All => CONCRETE.to_vec(),
+            Choice::Mobile => CONCRETE.into_iter().filter(|t| *t != Target::Web).collect(),
             Choice::One(t) => vec![t],
         }
     }

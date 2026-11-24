@@ -6,9 +6,11 @@ pub mod build;
 pub mod delegate;
 pub mod deploy;
 pub mod device;
+pub mod docpaths;
 pub mod doctor;
 #[cfg(test)]
 pub mod fakes;
+pub mod hook;
 pub mod install;
 pub mod kind;
 pub mod license;
@@ -25,5 +27,6 @@ pub mod rename;
 pub mod root;
 pub mod run;
 pub mod scaffold;
+pub mod sync;
 pub mod workspace;
 pub mod worktree;
