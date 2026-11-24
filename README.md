@@ -3,6 +3,8 @@
 Manage git repositories by reusing what exists:
 
 - **actname** (Rust library, pinned by commit) names the repository.
+- **`repo` itself** scaffolds it (`src/scaffold/`: mkdir, git init, templates from `~/Source/dotfiles/project-templates`, commit, private GitHub repo via `gh`); `--via-dotfiles` uses the old `dotfiles project setup` instead.
+- **`dotfiles project`** keeps only what is not repository management (`tex`, `docker`, `db`, `redis`, `flutter-device`); everything else lives in `repo` (see `CONTEXT.md`).
 - **`actrepo` itself** scaffolds it (`src/scaffold/`: mkdir, git init, templates from `~/Source/dotfiles/project-templates`, commit, private GitHub repo via `gh`); `--via-dotfiles` uses the old `dotfiles project setup` instead.
 - **`dotfiles project`** keeps only what is not repository management (`tex`, `docker`, `db`, `redis`, `flutter-device`); everything else lives in `actrepo` (see `CONTEXT.md`).
 - **Prerequisites:** `git` and `gh` on `PATH`; templates are read from `~/Source/dotfiles/project-templates` (`PROJECT_REPO_ROOT` / `DOTFILES_REPO_ROOT` override the root).
