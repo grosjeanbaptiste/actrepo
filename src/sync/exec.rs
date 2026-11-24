@@ -7,6 +7,17 @@ use std::io::Write;
 /// Pushes and pulls (fast-forward only) what the plan says; diverged and skipped steps run nothing.
 /// Fails when any step failed or still needs a human, after all of them were tried.
 pub fn execute(steps: &[Step], exec: &impl Exec, out: &mut impl Write) -> Result<()> {
+    run_all(steps, exec, out, true)
+}
+
+/// Like `execute`, but a step that needs a human (diverged, skipped) is printed as a `note` and does
+/// not fail the run: only a step that ran and failed does. For a session start, which must not
+/// report an error every time an old branch has diverged.
+pub fn execute_noting(steps: &[Step], exec: &impl Exec, out: &mut impl Write) -> Result<()> {
+    run_all(steps, exec, out, false)
+}
+
+fn run_all(steps: &[Step], exec: &impl Exec, out: &mut impl Write, todo_fails: bool) -> Result<()> {
     if steps.is_empty() {
         writeln!(out, "nothing to sync")?;
         return Ok(());
@@ -19,10 +30,11 @@ pub fn execute(steps: &[Step], exec: &impl Exec, out: &mut impl Write) -> Result
                 attention += 1;
                 writeln!(out, "FAIL {}: {e}", s.line())?;
             }
-            None => {
+            None if todo_fails => {
                 attention += 1;
                 writeln!(out, "TODO {}", s.line())?;
             }
+            None => writeln!(out, "note {}", s.line())?,
         }
     }
     if attention > 0 {
@@ -42,10 +54,21 @@ fn run(step: &Step, exec: &impl Exec) -> Option<Result<()>> {
             checked_out: true,
             ..
         } => Some(git(repo, &["merge", "--ff-only", upstream])),
-        Step::Pull { repo, branch, .. } => Some(git(
+        Step::Pull {
             repo,
-            &["fetch", "origin", &format!("{branch}:{branch}")],
-        )),
+            branch,
+            upstream,
+            ..
+        } => {
+            // The upstream may carry another name than the local branch (`origin/main`).
+            let remote_branch = upstream
+                .split_once('/')
+                .map_or(upstream.as_str(), |(_, b)| b);
+            Some(git(
+                repo,
+                &["fetch", "origin", &format!("{remote_branch}:{branch}")],
+            ))
+        }
         Step::Diverged { .. } | Step::Skip { .. } => None,
     }
 }

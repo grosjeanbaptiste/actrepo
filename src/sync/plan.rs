@@ -12,6 +12,8 @@ pub struct Branch {
     pub checked_out: bool,
     pub dirty: bool,
     pub default_branch: bool,
+    /// The other working tree this branch is checked out in, when it is not this one.
+    pub elsewhere: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -82,6 +84,13 @@ fn step(b: &Branch) -> Option<Step> {
             count,
         }),
         _ if b.checked_out && b.dirty => skip("dirty tree"),
+        _ if b.elsewhere.is_some() => skip(&format!(
+            "checked out in {}",
+            b.elsewhere
+                .as_deref()
+                .map(|p| p.display().to_string())
+                .unwrap_or_default()
+        )),
         (_, count) => Some(Step::Pull {
             repo,
             branch,

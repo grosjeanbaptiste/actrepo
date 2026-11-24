@@ -5,7 +5,7 @@ use std::path::Path;
 
 /// What git says about a repository, before it is turned into branches.
 pub struct Facts<'a> {
-    /// `git for-each-ref --format='%(refname:short)%09%(upstream:short)%09%(upstream:track,nobracket)' refs/heads`
+    /// `git for-each-ref --format='%(refname:short)%09%(upstream:short)%09%(upstream:track,nobracket)%09%(worktreepath)' refs/heads`
     pub refs: &'a str,
     /// The branch checked out in this working tree, empty when detached.
     pub current: &'a str,
@@ -20,7 +20,7 @@ pub fn parse(repo: &Path, facts: &Facts) -> Result<Vec<Branch>> {
 }
 
 fn branch(repo: &Path, facts: &Facts, line: &str) -> Result<Branch> {
-    let [name, upstream, track] = line.split('\t').collect::<Vec<_>>()[..] else {
+    let [name, upstream, track, worktree] = line.split('\t').collect::<Vec<_>>()[..] else {
         bail!("git for-each-ref: unexpected line {line:?}");
     };
     let gone = track == "gone";
@@ -38,6 +38,7 @@ fn branch(repo: &Path, facts: &Facts, line: &str) -> Result<Branch> {
         checked_out: name == facts.current,
         dirty: facts.dirty && name == facts.current,
         default_branch: !facts.default_branch.is_empty() && name == facts.default_branch,
+        elsewhere: (!worktree.is_empty() && Path::new(worktree) != repo).then(|| worktree.into()),
     })
 }
 

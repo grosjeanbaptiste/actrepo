@@ -1,6 +1,6 @@
 //! `actrepo sync [--dry-run] [DIR]`: fetch, read every branch of every repository, plan, then act.
 use super::{
-    exec::execute,
+    exec::{execute, execute_noting},
     plan::{Branch, plan, pull_only},
     read::{Facts, parse},
 };
@@ -28,7 +28,7 @@ fn branches(exec: &impl Exec, repo: &Path, err: &mut impl Write) -> Result<Vec<B
         repo,
         &[
             "for-each-ref",
-            "--format=%(refname:short)%09%(upstream:short)%09%(upstream:track,nobracket)",
+            "--format=%(refname:short)%09%(upstream:short)%09%(upstream:track,nobracket)%09%(worktreepath)",
             "refs/heads",
         ],
     )?;
@@ -114,6 +114,9 @@ pub fn run(
             writeln!(out, "nothing to sync")?;
         }
         return Ok(());
+    }
+    if opts.pull_only {
+        return execute_noting(&steps, exec, out);
     }
     execute(&steps, exec, out)
 }
