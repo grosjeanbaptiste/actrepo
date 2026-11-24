@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "actautoma"
 version = "0.1.0"
-source = "git+https://github.com/grosjeanbaptiste/actautoma?rev=64739167afb63c9ff52022b637038dcc2cd7011c#64739167afb63c9ff52022b637038dcc2cd7011c"
+source = "git+https://github.com/grosjeanbaptiste/actautoma?rev=d7be9340ce9d2521fd46acb8bff3a391d2f99926#d7be9340ce9d2521fd46acb8bff3a391d2f99926"
 dependencies = [
  "actpath",
  "serde_json",
@@ -22,7 +22,7 @@ dependencies = [
 [[package]]
 name = "actit"
 version = "0.1.0"
-source = "git+ssh://git@github.com/grosjeanbaptiste/Actit.git?rev=8aca87d885b70de2390829683a9f351095752e79#8aca87d885b70de2390829683a9f351095752e79"
+source = "git+ssh://git@github.com/grosjeanbaptiste/Actit.git?rev=28750bcd3a382cf77f602734049a0dddb8259ec9#28750bcd3a382cf77f602734049a0dddb8259ec9"
 dependencies = [
  "actautoma",
  "serde",
