@@ -31,11 +31,12 @@ fn an_invalid_wait_variable_fails_loudly_naming_it() {
 struct Git {
     calls: RefCell<Vec<String>>,
     fail: Option<&'static str>,
+    sha: &'static str,
 }
 
 impl Git {
     fn new() -> Self {
-        Self { calls: RefCell::new(vec![]), fail: None }
+        Self { calls: RefCell::new(vec![]), fail: None, sha: "abc1234def" }
     }
     fn failing(mut self, prefix: &'static str) -> Self {
         self.fail = Some(prefix);
@@ -52,6 +53,9 @@ impl Exec for Git {
         self.calls.borrow_mut().push(line.clone());
         if self.fail.is_some_and(|p| line.starts_with(p)) {
             anyhow::bail!("{line} failed");
+        }
+        if line == "git rev-parse --verify FETCH_HEAD" {
+            return Ok(self.sha.into());
         }
         if line == "git worktree list --porcelain" {
             return Ok("worktree /repo\n".into()); // every repository has a main worktree
@@ -261,14 +265,55 @@ fn a_failing_merge_fails_and_leaves_the_local_branches_alone() {
     let (f, g) = (FakeForge::pr("x", Mergeable::Mergeable).failing("merge"), Git::new());
     let r = go(yes(Some(8)), QUICK, &f, &g, "");
     assert!(r.result.is_err());
-    assert!(g.log().is_empty(), "{:?}", g.log());
+    assert!(!g.log().iter().any(|l| l == "git fetch -p"), "{:?}", g.log());
 }
 
 #[test]
 fn a_failing_local_update_fails_the_command_after_the_merge() {
-    let (f, g) = (FakeForge::pr("x", Mergeable::Mergeable), Git::new().failing("git fetch"));
+    let (f, g) = (FakeForge::pr("x", Mergeable::Mergeable), Git::new().failing("git fetch -p"));
     let r = go(yes(Some(8)), QUICK, &f, &g, "");
     assert!(merged(&f));
     assert!(r.err.contains("warning: PR merged; git fetch failed."), "{}", r.err);
     assert!(r.result.is_err());
+}
+
+const BACKUP: [&str; 3] = [
+    "git fetch origin refs/heads/feature",
+    "git rev-parse --verify FETCH_HEAD",
+    "git update-ref refs/backup/feature/abc1234def abc1234def",
+];
+
+#[test]
+fn the_branch_is_copied_to_a_backup_ref_before_the_merge_and_reported() {
+    let (f, g) = (FakeForge::pr("x", Mergeable::Mergeable), Git::new());
+    let r = go(yes(Some(8)), QUICK, &f, &g, "");
+    assert_eq!(&g.log()[..3], BACKUP, "{:?}", g.log());
+    assert!(r.out.contains("Backup: refs/backup/feature/abc1234def\n"), "{}", r.out);
+}
+
+#[test]
+fn a_cancelled_merge_makes_no_backup() {
+    let (f, g) = (FakeForge::pr("x", Mergeable::Mergeable), Git::new());
+    go(Opts { number: Some(8), yes: false }, QUICK, &f, &g, "n\n");
+    assert!(g.log().is_empty(), "{:?}", g.log());
+}
+
+#[test]
+fn a_failing_backup_step_stops_before_the_merge_and_names_the_cause() {
+    for step in ["git fetch origin", "git update-ref"] {
+        let (f, g) = (FakeForge::pr("x", Mergeable::Mergeable), Git::new().failing(step));
+        let r = go(yes(Some(8)), QUICK, &f, &g, "");
+        assert!(!merged(&f), "{step}");
+        let why = r.result.err().map(|e| format!("{e:#}")).unwrap_or_default();
+        assert!(why.contains("backup") && why.contains(step), "{step}: {why}");
+    }
+}
+
+#[test]
+fn an_empty_tip_stops_before_the_merge() {
+    let (f, mut g) = (FakeForge::pr("x", Mergeable::Mergeable), Git::new());
+    g.sha = "";
+    let r = go(yes(Some(8)), QUICK, &f, &g, "");
+    assert!(r.result.is_err() && !merged(&f));
+    assert!(!g.log().iter().any(|l| l.starts_with("git update-ref")), "{:?}", g.log());
 }

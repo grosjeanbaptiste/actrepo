@@ -1,5 +1,5 @@
 //! `actrepo pr merge [N] [--yes]` (port of dotfiles `project pr merge`).
-use super::{after, sync};
+use super::{after, backup, sync};
 use crate::scaffold::setup::Exec;
 use actautoma::forge::{Forge, Mergeable};
 use anyhow::{Result, anyhow, bail};
@@ -102,6 +102,7 @@ pub fn run(
         writeln!(out, "Cancelled.")?;
         return Ok(());
     }
+    backup::save(probe, act, dir, &pr.head, out)?; // no merge without the copy
     forge.merge_pr(pr.number)?;
     after::update(probe, act, dir, &pr.base, &pr.head, out, err)
 }
