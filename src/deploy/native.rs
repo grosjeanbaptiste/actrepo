@@ -133,7 +133,11 @@ fn publish(c: &mut Ctx, target: Target) -> Result<()> {
 fn plan(c: &mut Ctx, target: Target, flutter: &str) -> Result<()> {
     let root = c.root.display();
     let env = c.env.name();
-    let line = if target == Target::Mas {
+    let line = if target == Target::Homebrew && brew::builds_dmg(c) {
+        format!(
+            "macOS Developer ID: flutter build + xcodebuild archive + export, notarize + staple, dmg (cwd {root}) then publish homebrew to {env}"
+        )
+    } else if target == Target::Mas {
         format!(
             "macOS App Store: flutter config-only + xcodebuild archive + export signed .pkg (cwd {root}) then upload to {env}"
         )
@@ -160,6 +164,8 @@ pub fn deploy(c: &mut Ctx, target: Target, dry_run: bool) -> Result<()> {
     }
     if target == Target::Mas {
         macos_appstore_pkg(c)?;
+    } else if target == Target::Homebrew && brew::builds_dmg(c) {
+        // the dmg pipeline builds with its own version flags
     } else {
         let extra = flutter_extra(target, c.root);
         let mut args = vec!["build", flutter, "--release"];
