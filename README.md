@@ -78,7 +78,7 @@ actrepo workspace add NAME [--clone URL | --init TYPE] # adopt ./NAME, or clone 
 actrepo workspace remove NAME                          # forget the folder; the directory stays
 actrepo install NAME [--package P] [--bin B] [--force]   # cargo install --path of a registered, clean, committed project, through the heavy queue
 actrepo release [--require-audit] [--path DIR] [--script PATH] [ARGS...]   # run the project's release script with the profile and .envrc loaded
-actrepo deploy ENV TARGET [PATH] [--project N] [-y] [--dry-run] [--store-page]   # build + publish: web (Cloudflare Pages), ios, android, mas, homebrew, windows, linux, all
+actrepo deploy ENV TARGET [PATH] [--project N] [-y] [--dry-run] [--store-page]   # build + publish: web (Cloudflare Pages), ios, android, mas, homebrew, windows, linux, `mobile` (ios, android and every desktop target), all
 actrepo run NAME-OR-DIR [VERB [ARGS...]]               # run a Makefile target, melos script or cargo/flutter command (publish = actrepo deploy/release); no VERB lists them
 actrepo doctor [PATH]                                 # one-glance health: git, open PRs and CI (gh via actautoma), TODO/FIXME, licence, audit
 actrepo audit [PATH]                                  # env vars / CI secrets a project references, and where each is fulfilled

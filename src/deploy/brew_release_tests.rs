@@ -117,7 +117,7 @@ fn a_missing_dmg_is_named_before_anything() {
     let c = case(true);
     ok(fs::remove_file(c.proj.path().join("a.dmg")));
     let (r, t) = go(&c, &[], fake());
-    assert_eq!(message(&r), format!("BREW_DMG not found: {} (build it with build_dmg.sh).", c.proj.path().join("a.dmg").display()));
+    assert_eq!(message(&r), format!("BREW_DMG not found: {} (unset BREW_DMG to build it).", c.proj.path().join("a.dmg").display()));
     assert!(t.runs().is_empty());
 }
 

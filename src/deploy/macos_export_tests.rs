@@ -1,6 +1,8 @@
 use super::*;
 use crate::deploy::fake::{Fake, drive};
+use crate::deploy::target::Env;
 use std::fs;
+use std::path::Path;
 
 fn ok<T, E: std::fmt::Display>(r: std::result::Result<T, E>) -> T {
     r.unwrap_or_else(|e| panic!("{e}"))
@@ -115,4 +117,18 @@ fn an_export_with_two_apps_is_refused() {
     tool.on_run.push(("xcodebuild".into(), "-exportArchive".into(), extra));
     let (r, _) = go(d.path(), &VARS, tool);
     assert!(why(&r).contains("2 .app"), "{}", why(&r));
+}
+
+#[test]
+fn an_export_folder_that_cannot_be_cleared_stops_before_any_build() {
+    use std::os::unix::fs::PermissionsExt;
+    let d = project(true, true);
+    let export = d.path().join("build/macos/homebrew/export");
+    ok(fs::create_dir_all(&export));
+    ok(fs::write(export.join("Old.app"), "old"));
+    ok(fs::set_permissions(&export, fs::Permissions::from_mode(0o555)));
+    let (r, t) = go(d.path(), &VARS, Fake::default());
+    ok(fs::set_permissions(&export, fs::Permissions::from_mode(0o755))); // lets the temp folder clean up
+    assert!(why(&r).contains("clearing"), "{}", why(&r));
+    assert!(t.runs().is_empty());
 }

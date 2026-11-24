@@ -104,3 +104,45 @@ fn a_failing_step_stops_the_chain_names_itself_and_removes_the_zip() {
         assert!(!c.zip().exists(), "{prog}");
     }
 }
+
+/// Runs `notarize` with a hand-built context so the test can read stderr (`drive` drops it).
+fn go_err(c: &Case, tool: Fake) -> (Result<()>, String) {
+    let key = c.key();
+    let pairs = [("ASC_KEY_ID", "KID"), ("ASC_ISSUER_ID", "ISS"), ("ASC_PRIVATE_KEY_PATH", key.as_str())];
+    let home = std::env::temp_dir().join("deploy-fake-home-unused");
+    let vars = crate::deploy::vars::Vars::of(&pairs, &home);
+    let (mut out, mut err) = (vec![], vec![]);
+    let app = c.app();
+    let result = {
+        let mut ctx = crate::deploy::ctx::Ctx {
+            env: Env::Prod,
+            root: c.dir.path(),
+            vars: &vars,
+            tool: &tool,
+            forge: &crate::deploy::fake::forge(),
+            out: &mut out,
+            err: &mut err,
+        };
+        notarize(&mut ctx, &app)
+    };
+    (result, String::from_utf8_lossy(&err).into_owned())
+}
+
+#[test]
+fn a_zip_that_cannot_be_removed_is_warned_about_by_name() {
+    let c = case();
+    // ditto makes a non-empty folder where the zip should be: remove_file fails with a non-NotFound error.
+    let tool = Fake { on_run: vec![("ditto".into(), "-c".into(), c.zip().join("inner"))], ..Fake::default() };
+    let (r, err) = go_err(&c, tool);
+    assert!(r.is_ok(), "{}", message(&r));
+    assert!(err.contains("warning: could not remove"), "{err}");
+    assert!(err.contains(&c.zip().display().to_string()), "{err}");
+}
+
+#[test]
+fn a_zip_that_is_already_gone_gives_no_warning() {
+    let c = case();
+    let (r, err) = go_err(&c, Fake::default()); // ditto makes no zip at all
+    assert!(r.is_ok(), "{}", message(&r));
+    assert!(err.is_empty(), "{err}");
+}

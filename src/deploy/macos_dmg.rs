@@ -1,7 +1,7 @@
 //! Slice 3 of the dmg pipeline: the notarized `.app` and an `/Applications` link in a `.dmg` (port of `build_dmg.sh`).
 use super::brew_beta::asset_name;
 use super::ctx::Ctx;
-use super::tool::{Call, plain};
+use super::tool::plain;
 use anyhow::{Context, Result, bail};
 use std::fs;
 use std::io::ErrorKind;
@@ -46,13 +46,9 @@ pub fn stage_app(c: &Ctx, app: &Path, stage: &Path) -> Result<()> {
 
 fn sha256(c: &Ctx, dmg: &Path) -> Result<String> {
     let args = ["-a", "256", &dmg.display().to_string()].map(String::from);
-    let call = Call {
-        cwd: None,
-        ..plain("shasum", &args)
-    };
     let out = c
         .tool
-        .capture(&call)?
+        .capture(&plain("shasum", &args))?
         .context("could not hash the dmg (shasum failed).")?;
     out.split_whitespace()
         .next()

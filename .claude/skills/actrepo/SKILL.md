@@ -16,6 +16,7 @@ description: Manage git repositories on this machine with the actrepo CLI: creat
 - Rename: `actrepo rename OWNER/OLD NEW [--dir D] [--dry-run]`. Move a folder: `actrepo move DIR --into PARENT [--dry-run]`.
 - Status: `actrepo status [NAME]`; health report: `actrepo doctor [PATH]`; list: `actrepo list`.
 - Push a repository and its nested ones: `actrepo push [--dry-run] [--yes]`.
+- Deploy: `actrepo deploy ENV TARGET [--dry-run]`. TARGET is web, ios, android, mas, homebrew, windows, linux, `mobile` (ios, android and every desktop target) or all. A beta Homebrew deploy (`deploy test homebrew`, with `BREW_TAP_DIR`, no `BREW_DMG` and no `BREW_APP_URL`) builds the dmg itself: Developer ID export (`APPLE_TEAM_ID`), notarization (`ASC_KEY_ID`, `ASC_ISSUER_ID`), dmg, then the GitHub prerelease and the `@beta` cask. Check with `--dry-run` first; `BREW_PUSH` is the only thing that pushes the tap.
 
 ## Limits
 

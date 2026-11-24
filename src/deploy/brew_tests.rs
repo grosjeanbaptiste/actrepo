@@ -101,3 +101,60 @@ fn prod_ignores_the_dmg() {
     let (_, t) = go(d.path(), Env::Prod, &[("BREW_DMG", "/nope.dmg")], Fake::default());
     assert!(t.lines()[0].ends_with("--channel stable"));
 }
+
+fn bare(root: &std::path::Path, env: Env, extra: &[(&str, &str)], tool: Fake) -> (Result<()>, Fake) {
+    drive(env, root, extra, tool, update)
+}
+
+#[test]
+fn a_dmg_is_built_only_for_a_beta_with_neither_a_dmg_nor_a_hosted_url() {
+    let home = std::path::Path::new("/h");
+    let on = |env, pairs: &[(&str, &str)]| {
+        let vars = crate::deploy::vars::Vars::of(pairs, home);
+        let (mut o, mut e) = (vec![], vec![]);
+        let c = Ctx { env, root: std::path::Path::new("."), vars: &vars, tool: &Fake::default(), forge: &crate::deploy::fake::forge(), out: &mut o, err: &mut e };
+        builds_dmg(&c)
+    };
+    assert!(on(Env::Test, &[]));
+    assert!(!on(Env::Prod, &[]));
+    assert!(!on(Env::Test, &[("BREW_DMG", "/a.dmg")]));
+    assert!(!on(Env::Test, &[("BREW_APP_URL", "https://h/a.zip")]));
+}
+
+#[test]
+fn the_tap_is_checked_before_any_build() {
+    let d = project(true, Some("1.0.0"));
+    let (r, t) = bare(d.path(), Env::Test, &[], Fake::default());
+    assert_eq!(message(&r), "set BREW_TAP_DIR.");
+    assert!(t.runs().is_empty());
+}
+
+#[test]
+fn a_beta_without_a_dmg_builds_it_then_publishes_it() {
+    let d = project(true, Some("1.2.3+9"));
+    let root = d.path();
+    ok(fs::create_dir_all(root.join("macos/Runner")));
+    for f in ["macos/ExportOptionsDeveloperID.plist", "macos/Runner/DeveloperID.entitlements", "key.p8"] {
+        ok(fs::write(root.join(f), "x"));
+    }
+    let tap = ok(tempfile::tempdir());
+    ok(fs::create_dir_all(tap.path().join("Casks")));
+    ok(fs::write(tap.path().join("Casks/acteble.rb"), "cask \"acteble\" do\n  version \"0.0.0\"\n  desc \"D\"\nend\n"));
+    let (export, key, tap_s) = (root.join("build/macos/homebrew"), root.join("key.p8"), tap.path().display().to_string());
+    let tool = Fake {
+        on_run: vec![
+            ("xcodebuild".into(), "-exportArchive".into(), export.join("export/Acteble.app")),
+            ("ditto".into(), "-c".into(), export.join("export/Acteble.zip")),
+            ("hdiutil".into(), "create".into(), export.join("Acteble-1.2.3-beta.42.dmg")),
+        ],
+        captures: vec![("shasum".into(), "-a".into(), Some("cafe  x".into()))],
+        ..Fake::default()
+    };
+    let key_s = key.display().to_string();
+    let vars = [("APPLE_TEAM_ID", "T"), ("ASC_KEY_ID", "K"), ("ASC_ISSUER_ID", "I"), ("ASC_PRIVATE_KEY_PATH", key_s.as_str()), ("BREW_BUILD", "42"), ("BREW_TAP_DIR", tap_s.as_str()), ("STORES_PYTHON", "/py"), ("STORES_SCRIPTS_DIR", "/s")];
+    let (r, t) = bare(root, Env::Test, &vars, tool);
+    assert!(r.is_ok(), "{}", message(&r));
+    let progs: Vec<String> = t.runs().iter().map(|r| r.prog.clone()).collect();
+    assert_eq!(progs, ["flutter", "xcodebuild", "xcodebuild", "ditto", "xcrun", "xcrun", "spctl", "xcrun", "ditto", "hdiutil", "/py", "git", "git"]);
+    assert!(t.lines()[10].contains("--version 1.2.3-beta.42 --app-url https://github.com/acteble/homebrew-acteble/releases/download/v1.2.3-beta.42/Acteble-1.2.3-beta.42.dmg"), "{}", t.lines()[10]);
+}

@@ -124,3 +124,16 @@ fn a_missing_app_is_named() {
     assert!(why(&r).contains("no .app at"), "{}", why(&r));
     assert!(t.runs().is_empty());
 }
+
+#[test]
+fn a_stale_dmg_that_cannot_be_removed_fails_loudly_before_anything_runs() {
+    use std::os::unix::fs::PermissionsExt;
+    let c = case();
+    ok(fs::create_dir_all(c.out()));
+    ok(fs::write(c.dmg(), "old"));
+    ok(fs::set_permissions(c.out(), fs::Permissions::from_mode(0o555)));
+    let (r, t) = go(&c, &[], creating(&c));
+    ok(fs::set_permissions(c.out(), fs::Permissions::from_mode(0o755))); // lets the temp folder clean up
+    assert!(why(&r).contains("removing"), "{}", why(&r));
+    assert!(t.runs().is_empty());
+}
