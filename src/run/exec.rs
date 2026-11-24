@@ -31,7 +31,7 @@ fn delegate(dir: &Path, verb: &str, args: &[String], runner: &dyn Runner) -> Res
     finish(runner.run("dotfiles", &all, None)?)
 }
 
-/// `publish ENV STORE [OPTIONS]`: the project's TestFlight script when it has one, else `repo deploy`.
+/// `publish ENV STORE [OPTIONS]`: the project's TestFlight script when it has one, else `actrepo deploy`.
 fn publish(
     dir: &Path,
     args: &[String],
@@ -87,7 +87,7 @@ fn universal(
         if args.len() < 2 {
             return usage(
                 err,
-                format!("Usage: repo run {shown} publish <prod|test> <store> [options]"),
+                format!("Usage: actrepo run {shown} publish <prod|test> <store> [options]"),
             )
             .map(Some);
         }
@@ -101,7 +101,7 @@ fn universal(
         bail!("device hook {} is not executable", p.display());
     }
     if args.len() != 1 {
-        return usage(err, format!("Usage: repo run {shown} install <device>")).map(Some);
+        return usage(err, format!("Usage: actrepo run {shown} install <device>")).map(Some);
     }
     delegate(dir, verb, args, runner).map(Some)
 }
@@ -159,6 +159,10 @@ fn kind_verb(
     }))
 }
 
+/// Makefile targets that build or test a whole project: they wait for a slot in the shared
+/// heavy queue (`actqueue`) instead of starting at once on the 16 GB machine.
+const HEAVY_TARGETS: [&str; 4] = ["test", "check", "ci-local", "melos_bootstrap"];
+
 fn makefile_target(
     dir: &Path,
     verb: &str,
@@ -172,6 +176,11 @@ fn makefile_target(
     ];
     if !args.is_empty() {
         all.push(format!("ARGS={}", args.join(" ")));
+    }
+    if HEAVY_TARGETS.contains(&verb) {
+        let mut queued: Vec<String> = ["run", "--medium", "--", "make"].map(String::from).into();
+        queued.extend(all);
+        return finish(runner.run("actqueue", &queued, None)?);
     }
     finish(runner.run("make", &all, None)?)
 }

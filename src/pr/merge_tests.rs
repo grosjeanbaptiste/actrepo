@@ -161,11 +161,59 @@ fn zero_tries_never_waits() {
 }
 
 #[test]
-fn a_conflicting_pr_is_refused_without_waiting() {
+fn a_conflicting_pr_whose_branch_merges_cleanly_is_updated_then_merged() {
+    let f = FakeForge::pr("Add x", Conflicting).polling(&[Unknown, Mergeable::Mergeable]);
+    let g = Git::new();
+    let r = go(yes(Some(8)), QUICK, &f, &g, "");
+    assert!(r.result.is_ok(), "{:?} {}", r.result, r.err);
+    let log = g.log();
+    let at = |p: &str| log.iter().position(|l| l.starts_with(p));
+    assert!(at("git fetch origin").is_some(), "{log:?}");
+    assert!(at("git merge --no-edit origin/main") < at("git push origin HEAD:feature"), "{log:?}");
+    assert!(at("git push origin HEAD:feature").is_some(), "{log:?}");
+    assert!(log.iter().any(|l| l.starts_with("git worktree remove --force")), "{log:?}");
+    assert!(merged(&f));
+}
+
+#[test]
+fn a_real_content_conflict_is_refused_naming_the_cause_and_pushes_nothing() {
     let f = FakeForge::pr("Add x", Conflicting);
+    let g = Git::new().failing("git merge --no-edit");
+    let r = go(yes(Some(8)), QUICK, &f, &g, "");
+    assert!(r.result.is_err());
+    assert!(r.err.contains("conflicts with main"), "{}", r.err);
+    let log = g.log();
+    assert!(log.iter().any(|l| l == "git merge --abort"), "{log:?}");
+    assert!(!log.iter().any(|l| l.starts_with("git push")), "{log:?}");
+    assert!(log.iter().any(|l| l.starts_with("git worktree remove --force")), "{log:?}");
+    assert!(!merged(&f));
+}
+
+#[test]
+fn a_failing_push_of_the_updated_branch_fails_loudly_and_merges_nothing() {
+    let f = FakeForge::pr("Add x", Conflicting);
+    let g = Git::new().failing("git push");
+    let r = go(yes(Some(8)), QUICK, &f, &g, "");
+    assert!(r.result.is_err());
+    assert!(r.err.contains("could not push"), "{}", r.err);
+    assert!(g.log().iter().any(|l| l.starts_with("git worktree remove --force")));
+    assert!(!merged(&f));
+}
+
+#[test]
+fn a_failing_fetch_before_the_update_fails_loudly() {
+    let f = FakeForge::pr("Add x", Conflicting);
+    let g = Git::new().failing("git fetch origin");
+    let r = go(yes(Some(8)), QUICK, &f, &g, "");
+    assert!(r.result.is_err());
+    assert!(r.err.contains("could not fetch"), "{}", r.err);
+    assert!(!merged(&f));
+}
+
+#[test]
+fn still_conflicting_after_the_update_is_refused() {
+    let f = FakeForge::pr("Add x", Conflicting).polling(&[Conflicting]);
     let r = go(yes(Some(8)), QUICK, &f, &Git::new(), "");
-    assert!(r.sleeps.is_empty());
-    assert!(r.err.contains("This pull request is not ready to merge."), "{}", r.err);
     assert!(r.result.is_err());
     assert!(!merged(&f));
 }

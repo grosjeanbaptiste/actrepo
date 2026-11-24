@@ -1,10 +1,11 @@
 //! `repo <dir> run|install`: the real registry, the platform tools, the terminal.
 use super::request::parse;
+use crate::kind::detect;
 use crate::registry::file::{path, read};
 use crate::run::resolve;
 use actdevice::exec::System;
 use actdevice::session::{discover, execute, names};
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 
 pub fn command(args: &[String]) -> Result<()> {
     let req = parse(args)?;
@@ -16,14 +17,27 @@ pub fn command(args: &[String]) -> Result<()> {
         println!("{}", names(&found).join("\n"));
         return Ok(());
     };
-    execute(&System, &dir, req.action, &device, req.mode, &mut |w| {
-        eprintln!("warn: {w}")
-    })
+    let kind = detect(&dir)?;
+    let Some(tooling) = kind.device_tooling() else {
+        bail!(
+            "{} is a {kind:?} project: it does not run on a device",
+            req.name
+        );
+    };
+    execute(
+        &System,
+        tooling,
+        &dir,
+        req.action,
+        &device,
+        req.mode,
+        &mut |w| eprintln!("warn: {w}"),
+    )
     .map_err(|e| anyhow::anyhow!("{e}"))
     .with_context(|| format!("{} on {device}", req.name))
 }
 
-/// `repo __complete WORDS…`: one candidate per line.
+/// `actrepo __complete WORDS…`: one candidate per line.
 pub fn complete(words: &[String]) -> Result<()> {
     let entries = read(&path(|k| std::env::var(k).ok())?)?;
     let devices = || -> Result<Vec<String>> {

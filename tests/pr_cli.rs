@@ -1,4 +1,4 @@
-//! `repo pr create|merge` end to end: real git repositories and a bare remote, a scripted `gh`.
+//! `actrepo pr create|merge` end to end: real git repositories and a bare remote, a scripted `gh`.
 use std::fs;
 use std::io::Write;
 use std::os::unix::fs::{PermissionsExt, symlink};
@@ -113,7 +113,7 @@ fn repo(f: &Fx, args: &[&str], stdin: &str, env: &[(&str, &str)]) -> Output {
 }
 
 fn repo_in(f: &Fx, dir: &Path, args: &[&str], stdin: &str, env: &[(&str, &str)]) -> Output {
-    let mut cmd = Command::new(env!("CARGO_BIN_EXE_repo"));
+    let mut cmd = Command::new(env!("CARGO_BIN_EXE_actrepo"));
     cmd.args(args)
         .current_dir(dir)
         .env("PATH", path_with(&f.bin))
@@ -333,7 +333,7 @@ fn a_missing_gh_fails_loudly_and_merges_nothing() {
     ok(fs::create_dir_all(&only_git));
     let git_path = text(&ok(Command::new("sh").args(["-c", "command -v git"]).output()).stdout);
     ok(symlink(git_path.trim(), only_git.join("git")));
-    let o = ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+    let o = ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(["pr", "merge", "8", "-y"])
         .current_dir(&f.work)
         .env("PATH", &only_git)

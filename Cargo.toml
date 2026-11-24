@@ -1,5 +1,5 @@
 [package]
-name = "repo"
+name = "actrepo"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.85"
@@ -7,10 +7,10 @@ description = "Manage git repositories: names from actname, scaffolding and stat
 
 [dependencies]
 actname = { git = "ssh://git@github.com/grosjeanbaptiste/Actname.git", rev = "dfc9f80b91b2e4df1c6bd3a077385df765cd43cf" }
-actit = { git = "ssh://git@github.com/grosjeanbaptiste/Actit.git", rev = "8c5fcb74eaa1519b2cacf5fe03d2e524f85b2be1" }
-actautoma = { git = "https://github.com/grosjeanbaptiste/actautoma", rev = "3965fc3840298ee5d5b403c502474c2ff243c966" }
-actdevice = { git = "ssh://git@github.com/grosjeanbaptiste/actdevice.git", rev = "d5a6da90b2c817809dc1c19a1e38f4a464b03d47" }
-actmake = { git = "ssh://git@github.com/grosjeanbaptiste/actmake.git", rev = "fde46e0d563861119819071bc0402d9335971ea7" }
+actit = { git = "ssh://git@github.com/grosjeanbaptiste/Actit.git", rev = "8aca87d885b70de2390829683a9f351095752e79" }
+actautoma = { git = "https://github.com/grosjeanbaptiste/actautoma", rev = "64739167afb63c9ff52022b637038dcc2cd7011c" }
+actdevice = { git = "ssh://git@github.com/grosjeanbaptiste/actdevice.git", rev = "f1cd0d3ebd116762f1eede169c193eba5d7ea5b2" }
+actmake = { git = "ssh://git@github.com/grosjeanbaptiste/actmake.git", rev = "52fd2db6029a8a28186c0a8f095e5c456427de81" }
 anyhow = "1"
 clap = { version = "4", features = ["derive"] }
 serde = { version = "1", features = ["derive"] }

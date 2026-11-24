@@ -1,8 +1,8 @@
-//! `repo actit|actname|actautoma` end to end through the binary. No network.
+//! `actrepo actit|actname|actautoma` end to end through the binary. No network.
 use std::process::{Command, Output};
 
 fn repo(args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_repo"))
+    Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(args)
         .output()
         .unwrap_or_else(|e| panic!("{e}"))
@@ -66,4 +66,30 @@ fn repo_actautoma_with_no_known_command_prints_the_usage() {
         "{}",
         stderr(&o)
     );
+}
+
+#[test]
+fn repo_move_finds_the_repositories_itself_and_a_dry_run_changes_nothing() {
+    let base = tempfile::tempdir().unwrap_or_else(|e| panic!("{e}"));
+    let group = base.path().join("group");
+    for r in ["a", "b"] {
+        std::fs::create_dir_all(group.join(r).join(".git")).unwrap_or_else(|e| panic!("{e}"));
+    }
+    std::fs::create_dir(base.path().join("into")).unwrap_or_else(|e| panic!("{e}"));
+    let o = Command::new(env!("CARGO_BIN_EXE_actrepo"))
+        .arg("move")
+        .arg(&group)
+        .arg("--into")
+        .arg(base.path().join("into"))
+        .arg("--dry-run")
+        .env("HOME", base.path())
+        .output()
+        .unwrap_or_else(|e| panic!("{e}"));
+    assert!(o.status.success(), "{}", stderr(&o));
+    assert!(
+        stdout(&o).contains("2 repositories found"),
+        "{}",
+        stdout(&o)
+    );
+    assert!(group.join("a/.git").is_dir() && !base.path().join("into/group").exists());
 }

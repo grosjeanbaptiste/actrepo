@@ -1,4 +1,4 @@
-//! `repo check|apply [path]`: the standard-vs-project audit and refresh.
+//! `actrepo check|apply [path]`: the standard-vs-project audit and refresh.
 use super::apply::{Mode, sync};
 use super::native::{Process, templates_root, year_now};
 use super::{
@@ -6,6 +6,7 @@ use super::{
     plan::{known_types, layered},
     setup::vars,
 };
+use crate::hook::line::line;
 use anyhow::{Context, Result, bail};
 use std::path::Path;
 
@@ -45,8 +46,14 @@ pub fn report(
         _ => format!("==> Applying {kind} standard to {}", target.display()),
     };
     let lines = sync(&target, &plan, &v, mode)?;
+    // A git repository also gets the hook that pushes after each commit.
+    let hook = target
+        .join(".git")
+        .exists()
+        .then(|| line(&Process, &target, mode));
     Ok(std::iter::once(head)
         .chain(lines)
+        .chain(hook)
         .collect::<Vec<_>>()
         .join("\n"))
 }
@@ -128,6 +135,16 @@ mod tests {
         assert!(!c.contains("seed.txt"), "{c}");
         let a = ok(report(p.path(), Some("app/x"), Mode::Apply, t.path(), "1"));
         assert!(a.contains("  + wrote      seed.txt"), "{a}");
+    }
+
+    #[test]
+    fn a_git_repository_gets_the_hook_line_and_a_plain_folder_does_not() {
+        let (t, p) = (templates(), ok(tempfile::tempdir()));
+        let plain = ok(report(p.path(), Some("x"), Mode::Apply, t.path(), "1"));
+        assert!(!plain.contains("post-commit hook"), "{plain}");
+        ok(fs::create_dir(p.path().join(".git")));
+        let g = ok(report(p.path(), Some("x"), Mode::Check, t.path(), "1"));
+        assert!(g.contains("post-commit hook"), "{g}");
     }
 
     #[test]

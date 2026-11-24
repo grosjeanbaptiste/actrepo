@@ -1,4 +1,4 @@
-//! `repo doctor`: the report on the real `git`, the real platform tool (`gh`, through actautoma) and the clock.
+//! `actrepo doctor`: the report on the real `git`, the real platform tool (`gh`, through actautoma) and the clock.
 use super::{Ports, date, run};
 use crate::audit;
 use crate::scaffold::native::Quiet;

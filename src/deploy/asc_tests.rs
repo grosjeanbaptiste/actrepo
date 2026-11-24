@@ -18,7 +18,7 @@ fn go(env: Env, kind: Kind, pairs: &[(&str, &str)], tool: Fake) -> Run {
     let home = ok(tempfile::tempdir());
     let vars = Vars::of(&[pairs, &[("STORES_PYTHON", "/py"), ("STORES_SCRIPTS_DIR", "/s")]].concat(), home.path());
     let (mut out, mut err) = (vec![], vec![]);
-    let mut c = Ctx { env, root: Path::new("/proj"), vars: &vars, tool: &tool, out: &mut out, err: &mut err };
+    let mut c = Ctx { env, root: Path::new("/proj"), vars: &vars, tool: &tool, forge: &crate::deploy::fake::forge(), out: &mut out, err: &mut err };
     let result = upload(&mut c, kind, Path::new("/proj/build/App.ipa"));
     Run { result, tool, home }
 }
@@ -107,7 +107,7 @@ fn the_default_key_and_stage_live_under_home_and_an_absent_key_is_not_staged() {
     let tool = Fake::default();
     let vars = Vars::of(&[KEYS[0], KEYS[1]], home.path());
     let (mut out, mut err) = (vec![], vec![]);
-    let mut c = Ctx { env: Env::Test, root: Path::new("/p"), vars: &vars, tool: &tool, out: &mut out, err: &mut err };
+    let mut c = Ctx { env: Env::Test, root: Path::new("/p"), vars: &vars, tool: &tool, forge: &crate::deploy::fake::forge(), out: &mut out, err: &mut err };
     ok(upload(&mut c, Kind::Ios, Path::new("/a.ipa")));
     assert_eq!(ok(fs::read_to_string(home.path().join(".appstoreconnect/private_keys/AuthKey_K1.p8"))), "K");
     let r = go(Env::Test, Kind::Ios, &KEYS, Fake::default());

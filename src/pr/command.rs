@@ -1,6 +1,7 @@
-//! The real ports of `repo pr`: the platform (through actautoma) and git on the process, stdin/stdout, the clock.
-use super::{create, merge};
+//! The real ports of `actrepo pr`: the platform (through actautoma) and git on the process, stdin/stdout, the clock.
+use super::{create, merge, verbs};
 use crate::scaffold::native::{Process, Quiet};
+use actautoma::pulls::PrFilter;
 use actautoma::{gh::Gh, process::ProcessRunner};
 use anyhow::Result;
 use std::path::Path;
@@ -35,4 +36,24 @@ pub fn run_merge(opts: &merge::Opts) -> Result<()> {
         &mut out,
         &mut err,
     )
+}
+
+fn forge() -> Gh<ProcessRunner> {
+    Gh::new(ProcessRunner)
+}
+
+pub fn run_view(number: Option<u64>) -> Result<()> {
+    verbs::view(&forge(), number, &mut std::io::stdout().lock())
+}
+
+pub fn run_list(filter: PrFilter) -> Result<()> {
+    verbs::list(&forge(), filter, &mut std::io::stdout().lock())
+}
+
+pub fn run_retarget(number: u64, base: &str) -> Result<()> {
+    verbs::retarget(&forge(), number, base, &mut std::io::stdout().lock())
+}
+
+pub fn run_close(number: u64, comment: Option<&str>) -> Result<()> {
+    verbs::close(&forge(), number, comment, &mut std::io::stdout().lock())
 }

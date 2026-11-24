@@ -1,4 +1,4 @@
-//! The real ports of `repo workspace`: the file lookup, git, stdout.
+//! The real ports of `actrepo workspace`: the file lookup, git, stdout.
 use super::edit::{self, Source};
 use super::{push, show};
 use crate::scaffold::native::{Process, Quiet, templates_root, year_now};
@@ -8,7 +8,7 @@ use anyhow::{Context, Result, bail};
 use std::path::{Path, PathBuf};
 
 /// `DOTFILES_WORKSPACE_FILE`, else the first `*.code-workspace` here or above.
-fn workspace_file() -> Result<PathBuf> {
+pub fn workspace_file() -> Result<PathBuf> {
     if let Some(f) = std::env::var_os("DOTFILES_WORKSPACE_FILE").filter(|f| !f.is_empty()) {
         return Ok(f.into());
     }

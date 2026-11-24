@@ -1,6 +1,9 @@
-//! `repo deploy ENV TARGET [PATH]` (port of dotfiles `project deploy`).
+//! `actrepo deploy ENV TARGET [PATH]` (port of dotfiles `project deploy`).
 pub mod asc;
 pub mod brew;
+pub mod brew_beta;
+pub mod brew_release;
+pub mod brew_steps;
 pub mod command;
 pub mod ctx;
 #[cfg(test)]
@@ -17,6 +20,7 @@ pub mod tool;
 pub mod vars;
 pub mod web;
 
+use actautoma::forge::Forge;
 use anyhow::{Context, Result, bail};
 use ctx::Ctx;
 use std::io::{BufRead, Write};
@@ -69,6 +73,7 @@ pub fn run(
     opts: &Opts,
     vars: &Vars,
     tool: &dyn Tool,
+    forge: &dyn Forge,
     input: &mut dyn BufRead,
     out: &mut dyn Write,
     err: &mut dyn Write,
@@ -85,6 +90,7 @@ pub fn run(
         root: &root,
         vars,
         tool,
+        forge,
         out,
         err,
     };
@@ -95,9 +101,11 @@ pub fn run(
                 t.name(),
                 root.display()
             ),
-            (true, Choice::All) => {
-                format!("Push the all store page from {}/stores?", root.display())
-            }
+            (true, choice @ (Choice::All | Choice::Mobile)) => format!(
+                "Push the {} store page from {}/stores?",
+                choice_name(choice),
+                root.display()
+            ),
             (false, choice) => format!(
                 "Deploy '{}' to '{}' from {}?",
                 choice_name(choice),
@@ -138,6 +146,7 @@ pub fn run(
 fn choice_name(choice: Choice) -> &'static str {
     match choice {
         Choice::All => "all",
+        Choice::Mobile => "mobile",
         Choice::One(t) => t.name(),
     }
 }

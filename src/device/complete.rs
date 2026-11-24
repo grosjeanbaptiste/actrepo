@@ -1,4 +1,4 @@
-//! `repo __complete WORDS…`: what the shell may offer at the cursor (last word = the one being typed).
+//! `actrepo __complete WORDS…`: what the shell may offer at the cursor (last word = the one being typed).
 use crate::registry::file::Entry;
 use anyhow::Result;
 

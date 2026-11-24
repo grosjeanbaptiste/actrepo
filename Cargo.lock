@@ -5,15 +5,16 @@ version = 4
 [[package]]
 name = "actautoma"
 version = "0.1.0"
-source = "git+https://github.com/grosjeanbaptiste/actautoma?rev=3965fc3840298ee5d5b403c502474c2ff243c966#3965fc3840298ee5d5b403c502474c2ff243c966"
+source = "git+https://github.com/grosjeanbaptiste/actautoma?rev=64739167afb63c9ff52022b637038dcc2cd7011c#64739167afb63c9ff52022b637038dcc2cd7011c"
 dependencies = [
+ "actpath",
  "serde_json",
 ]
 
 [[package]]
 name = "actdevice"
-version = "0.1.0"
-source = "git+ssh://git@github.com/grosjeanbaptiste/actdevice.git?rev=d5a6da90b2c817809dc1c19a1e38f4a464b03d47#d5a6da90b2c817809dc1c19a1e38f4a464b03d47"
+version = "0.2.0"
+source = "git+ssh://git@github.com/grosjeanbaptiste/actdevice.git?rev=f1cd0d3ebd116762f1eede169c193eba5d7ea5b2#f1cd0d3ebd116762f1eede169c193eba5d7ea5b2"
 dependencies = [
  "serde_json",
 ]
@@ -21,7 +22,7 @@ dependencies = [
 [[package]]
 name = "actit"
 version = "0.1.0"
-source = "git+ssh://git@github.com/grosjeanbaptiste/Actit.git?rev=8c5fcb74eaa1519b2cacf5fe03d2e524f85b2be1#8c5fcb74eaa1519b2cacf5fe03d2e524f85b2be1"
+source = "git+ssh://git@github.com/grosjeanbaptiste/Actit.git?rev=8aca87d885b70de2390829683a9f351095752e79#8aca87d885b70de2390829683a9f351095752e79"
 dependencies = [
  "actautoma",
  "serde",
@@ -33,7 +34,7 @@ dependencies = [
 [[package]]
 name = "actmake"
 version = "0.1.0"
-source = "git+ssh://git@github.com/grosjeanbaptiste/actmake.git?rev=fde46e0d563861119819071bc0402d9335971ea7#fde46e0d563861119819071bc0402d9335971ea7"
+source = "git+ssh://git@github.com/grosjeanbaptiste/actmake.git?rev=52fd2db6029a8a28186c0a8f095e5c456427de81#52fd2db6029a8a28186c0a8f095e5c456427de81"
 dependencies = [
  "acttex",
 ]
@@ -42,6 +43,27 @@ dependencies = [
 name = "actname"
 version = "0.1.0"
 source = "git+ssh://git@github.com/grosjeanbaptiste/Actname.git?rev=dfc9f80b91b2e4df1c6bd3a077385df765cd43cf#dfc9f80b91b2e4df1c6bd3a077385df765cd43cf"
+
+[[package]]
+name = "actpath"
+version = "0.1.0"
+source = "git+ssh://git@github.com/grosjeanbaptiste/actpath.git?rev=145c049dc720fb6dbd7ee3a3483588788aed2bae#145c049dc720fb6dbd7ee3a3483588788aed2bae"
+
+[[package]]
+name = "actrepo"
+version = "0.1.0"
+dependencies = [
+ "actautoma",
+ "actdevice",
+ "actit",
+ "actmake",
+ "actname",
+ "anyhow",
+ "clap",
+ "serde",
+ "serde_json",
+ "tempfile",
+]
 
 [[package]]
 name = "acttex"
@@ -506,22 +528,6 @@ name = "r-efi"
 version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f8dcc9c7d52a811697d2151c701e0d08956f92b0e24136cf4cf27b57a6a0d9bf"
-
-[[package]]
-name = "repo"
-version = "0.1.0"
-dependencies = [
- "actautoma",
- "actdevice",
- "actit",
- "actmake",
- "actname",
- "anyhow",
- "clap",
- "serde",
- "serde_json",
- "tempfile",
-]
 
 [[package]]
 name = "ring"

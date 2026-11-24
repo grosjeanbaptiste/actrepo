@@ -14,7 +14,9 @@ pub enum Kind {
     Dioxus,
     /// A Rust crate on axum.
     Api,
-    /// Cargo crate without axum, Dart package, npm package.
+    /// A Cargo crate without axum.
+    Crate,
+    /// A Dart or npm package.
     Package,
     Tex,
     /// A page printed to PDF, declared by `actmake.toml`.
@@ -24,13 +26,29 @@ pub enum Kind {
 }
 
 impl Kind {
+    /// The actdevice tooling that runs this kind on a device; None for what is not an app.
+    pub fn device_tooling(self) -> Option<actdevice::project::Kind> {
+        use actdevice::project::Kind as Tooling;
+        match self {
+            Kind::Flutter => Some(Tooling::Flutter),
+            Kind::Hook => Some(Tooling::Hook),
+            Kind::Dioxus => Some(Tooling::Dioxus),
+            Kind::Api | Kind::Crate | Kind::Package | Kind::Tex | Kind::Html | Kind::Markdown => {
+                None
+            }
+        }
+    }
+
     /// The actmake engine that builds this kind; None until one exists.
     pub fn engine(self) -> Option<Engine> {
         match self {
+            Kind::Flutter => Some(Engine::Flutter),
+            Kind::Dioxus => Some(Engine::Dioxus),
+            Kind::Api | Kind::Crate => Some(Engine::Cargo),
             Kind::Tex => Some(Engine::Tex),
             Kind::Html => Some(Engine::Html),
             Kind::Markdown => Some(Engine::Markdown),
-            Kind::Flutter | Kind::Hook | Kind::Dioxus | Kind::Api | Kind::Package => None,
+            Kind::Hook | Kind::Package => None,
         }
     }
 }
@@ -59,7 +77,7 @@ impl std::error::Error for KindError {}
 
 /// The kind of project in `dir`: `actmake.toml` when present (the owner's word), else marker
 /// files, first match wins: Flutter, device hook,
-/// Dioxus, axum API, LaTeX, then any other package.
+/// Dioxus, axum API, LaTeX, Cargo crate, then any other package.
 pub fn detect(dir: &Path) -> Result<Kind, KindError> {
     let entries =
         fs::read_dir(dir).map_err(|e| KindError::Unreadable(format!("{}: {e}", dir.display())))?;
@@ -88,7 +106,10 @@ pub fn detect(dir: &Path) -> Result<Kind, KindError> {
     if has_tex {
         return Ok(Kind::Tex);
     }
-    if cargo.is_some() || pubspec.is_some() || dir.join("package.json").is_file() {
+    if cargo.is_some() {
+        return Ok(Kind::Crate);
+    }
+    if pubspec.is_some() || dir.join("package.json").is_file() {
         return Ok(Kind::Package);
     }
     Err(KindError::Unknown(dir.display().to_string()))

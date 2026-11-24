@@ -1,4 +1,4 @@
-//! `repo audit` end to end on temp projects, a temp secret store and a controlled environment.
+//! `actrepo audit` end to end on temp projects, a temp secret store and a controlled environment.
 use std::fs;
 use std::path::Path;
 use std::process::{Command, Output};
@@ -32,7 +32,7 @@ fn fx(env_example: &str) -> Fx {
 
 impl Fx {
     fn audit(&self, arg: &Path, env: &[(&str, &str)]) -> Output {
-        ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+        ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
             .arg("audit")
             .arg(arg)
             .env_clear()
@@ -126,7 +126,7 @@ fn a_path_that_is_not_a_directory_fails_loudly() {
 #[test]
 fn the_default_path_is_the_current_directory() {
     let f = fx("ONLY_HERE=\n");
-    let o = ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+    let o = ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .arg("audit")
         .current_dir(&f.project)
         .env_clear()

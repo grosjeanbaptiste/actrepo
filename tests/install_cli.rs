@@ -1,4 +1,4 @@
-//! `repo install` end to end: a real registry and git repository, scripted `dotfiles` and `cargo`.
+//! `actrepo install` end to end: a real registry and git repository, scripted `dotfiles` and `cargo`.
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -21,10 +21,10 @@ fn git(dir: &Path, args: &[&str]) {
     );
 }
 
-const DOTFILES: &str = r#"#!/bin/sh
+const ACTQUEUE: &str = r#"#!/bin/sh
 echo "$*" >> "$STAGE/heavy.log"
-[ "$1" = heavy ] && [ "$2" = run ] && [ "$3" = -- ] || exit 97
-shift 3
+[ "$1" = run ] && [ "$2" = -- ] || exit 97
+shift 2
 exec "$@"
 "#;
 
@@ -69,7 +69,7 @@ fn fx() -> Fx {
         base.join("state/projects.txt"),
         format!("ss|{}\n", project.display()),
     ));
-    script(&base.join("bin/dotfiles"), DOTFILES);
+    script(&base.join("bin/actqueue"), ACTQUEUE);
     script(&base.join("bin/cargo"), CARGO);
     Fx {
         _d: d,
@@ -81,7 +81,7 @@ fn fx() -> Fx {
 impl Fx {
     fn install(&self, args: &[&str], extra: &[(&str, &str)]) -> Output {
         let path = format!("{}:/usr/bin:/bin", self.base.join("bin").display());
-        ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+        ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
             .arg("install")
             .args(args)
             .env_clear()
@@ -122,7 +122,7 @@ fn the_binary_is_installed_through_the_heavy_queue_and_cargo_output_is_shown() {
     );
     let want = format!("install --path {} --locked --bin ss", f.project.display());
     assert_eq!(f.log("cargo.log"), want);
-    assert_eq!(f.log("heavy.log"), format!("heavy run -- cargo {want}"));
+    assert_eq!(f.log("heavy.log"), format!("run -- cargo {want}"));
 }
 
 #[test]

@@ -26,7 +26,7 @@ fn a_pubspec_with_flutter_is_a_flutter_app() {
         )],
     );
     assert_eq!(k, Ok(Kind::Flutter));
-    assert_eq!(Kind::Flutter.engine(), None);
+    assert_eq!(Kind::Flutter.engine(), Some(actmake::Engine::Flutter));
 }
 
 #[test]
@@ -35,7 +35,11 @@ fn a_dart_package_is_a_package() {
         kind("dart", &[("pubspec.yaml", "name: x\n")]),
         Ok(Kind::Package)
     );
-    assert_eq!(Kind::Package.engine(), None);
+    assert_eq!(
+        Kind::Package.engine(),
+        None,
+        "dart and npm have no engine yet"
+    );
 }
 
 #[test]
@@ -45,7 +49,7 @@ fn dioxus_toml_is_a_dioxus_app_even_with_a_cargo_toml() {
         &[("Dioxus.toml", ""), ("Cargo.toml", "[package]\n")],
     );
     assert_eq!(k, Ok(Kind::Dioxus));
-    assert_eq!(Kind::Dioxus.engine(), None);
+    assert_eq!(Kind::Dioxus.engine(), Some(actmake::Engine::Dioxus));
 }
 
 #[test]
@@ -70,13 +74,17 @@ fn a_hook_that_is_not_executable_does_not_count() {
 }
 
 #[test]
-fn a_cargo_crate_with_axum_is_an_api_otherwise_a_package() {
+fn a_cargo_crate_with_axum_is_an_api_otherwise_a_crate() {
     let api = kind("api", &[("Cargo.toml", "[dependencies]\naxum = \"0.8\"\n")]);
-    assert_eq!((api, Kind::Api.engine()), (Ok(Kind::Api), None));
+    assert_eq!(
+        (api, Kind::Api.engine()),
+        (Ok(Kind::Api), Some(actmake::Engine::Cargo))
+    );
     assert_eq!(
         kind("lib", &[("Cargo.toml", "[package]\nname = \"x\"\n")]),
-        Ok(Kind::Package)
+        Ok(Kind::Crate)
     );
+    assert_eq!(Kind::Crate.engine(), Some(actmake::Engine::Cargo));
 }
 
 #[test]
@@ -156,4 +164,22 @@ fn an_unknown_engine_or_a_missing_key_is_an_error_not_a_guess() {
 fn bad_config_is_reported_with_its_reason() {
     let e = KindError::BadConfig("no engine".into()).to_string();
     assert_eq!(e, "invalid actmake.toml: no engine");
+}
+
+#[test]
+fn only_apps_run_on_a_device_and_each_names_its_tooling() {
+    use actdevice::project::Kind as Tooling;
+    assert_eq!(Kind::Flutter.device_tooling(), Some(Tooling::Flutter));
+    assert_eq!(Kind::Hook.device_tooling(), Some(Tooling::Hook));
+    assert_eq!(Kind::Dioxus.device_tooling(), Some(Tooling::Dioxus));
+    for k in [
+        Kind::Api,
+        Kind::Crate,
+        Kind::Package,
+        Kind::Tex,
+        Kind::Html,
+        Kind::Markdown,
+    ] {
+        assert_eq!(k.device_tooling(), None, "{k:?}");
+    }
 }

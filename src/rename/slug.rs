@@ -1,4 +1,4 @@
-//! `repo rename OLD NEW`: a bare OLD gets its owner from the `origin` of the registered folder.
+//! `actrepo rename OLD NEW`: a bare OLD gets its owner from the `origin` of the registered folder.
 use crate::registry::file::{Entry, find};
 use anyhow::{Result, bail};
 use std::path::Path;

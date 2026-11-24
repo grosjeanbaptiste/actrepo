@@ -1,4 +1,4 @@
-//! The text `repo push` prints: header and table, the push candidates, the summary.
+//! The text `actrepo push` prints: header and table, the push candidates, the summary.
 use super::rows::{Row, State};
 use std::path::Path;
 
@@ -10,7 +10,7 @@ pub fn table(target: &Path, rows: &[Row]) -> String {
         .unwrap_or(0)
         .max(4);
     let mut out = format!(
-        "==> repo push\n    scan root : {}\n    repos     : {} found\n\n",
+        "==> actrepo push\n    scan root : {}\n    repos     : {} found\n\n",
         target.display(),
         rows.len()
     );

@@ -1,4 +1,4 @@
-//! The real ports of `repo worktree`: git on the process, stdout.
+//! The real ports of `actrepo worktree`: git on the process, stdout.
 use super::list::{json, list, text};
 use super::owners::{assign, live};
 use super::prune::prune;
@@ -40,6 +40,12 @@ pub fn prune_and_refresh(
     if n > 0 && !dry_run && !refresh(probe, act, dir, err)? {
         anyhow::bail!("worktrees pruned, but actinstall did not update the installed binaries");
     }
+    Ok(())
+}
+
+pub fn run_new(branch: &str, base: &str) -> Result<()> {
+    let path = super::new::create(&Process, Path::new("."), branch, base)?;
+    println!("{}", path.display());
     Ok(())
 }
 

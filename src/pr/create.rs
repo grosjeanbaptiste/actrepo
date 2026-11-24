@@ -1,4 +1,4 @@
-//! `repo pr create [--base B] [--title T] [--body D]` (port of dotfiles `project pr create`,
+//! `actrepo pr create [--base B] [--title T] [--body D]` (port of dotfiles `project pr create`,
 //! with flags in place of the fzf base picker; title and description are asked when not given).
 use crate::scaffold::setup::Exec;
 use actautoma::forge::{Forge, NewPullRequest};

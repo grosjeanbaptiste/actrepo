@@ -1,4 +1,4 @@
-//! `repo __complete`, `repo completions` and `repo <dir> run|install` end to end: a real registry, scripted `adb`, `xcrun` and `flutter`.
+//! `actrepo __complete`, `actrepo completions` and `repo <dir> run|install` end to end: a real registry, scripted `adb`, `xcrun` and `flutter`.
 use std::fs;
 use std::os::unix::fs::PermissionsExt;
 use std::path::{Path, PathBuf};
@@ -45,7 +45,7 @@ fn fx() -> Fx {
 }
 
 fn repo(f: &Fx, args: &[&str]) -> Output {
-    ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+    ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(args)
         .env("DOTFILES_STATE_ROOT", f.base.join("state"))
         .env("STAGE", &f.base)
@@ -76,7 +76,7 @@ fn completions_zsh_calls_complete_and_uses_fzf_when_present() {
     assert!(o.status.success());
     let s = out(&o);
     assert!(
-        s.contains("repo __complete") && s.contains("fzf") && s.contains("compdef"),
+        s.contains("actrepo __complete") && s.contains("fzf") && s.contains("compdef"),
         "{s}"
     );
 }
@@ -105,4 +105,35 @@ fn an_unknown_device_fails_and_lists_the_available_ones() {
     assert!(!o.status.success());
     assert!(String::from_utf8_lossy(&o.stderr).contains("Pixel 7 (R59X)"));
     assert!(!f.base.join("calls.log").exists());
+}
+
+#[test]
+fn a_project_that_is_not_an_app_is_refused_for_run_naming_its_kind() {
+    let f = fx();
+    ok(fs::create_dir_all(f.base.join("lib")));
+    ok(fs::write(f.base.join("lib/Cargo.toml"), "[package]\n"));
+    let mut text = ok(fs::read_to_string(f.base.join("state/projects.txt")));
+    text.push_str(&format!("lib|{}\n", f.base.join("lib").display()));
+    ok(fs::write(f.base.join("state/projects.txt"), text));
+    let o = repo(&f, &["lib", "run", "R59X"]);
+    assert!(!o.status.success());
+    let e = String::from_utf8_lossy(&o.stderr).into_owned();
+    assert!(
+        e.contains("lib is a Crate project: it does not run on a device"),
+        "{e}"
+    );
+    assert!(!f.base.join("calls.log").exists());
+}
+
+#[test]
+fn a_folder_of_no_known_kind_is_refused_for_run_not_guessed() {
+    let f = fx();
+    ok(fs::create_dir_all(f.base.join("blank")));
+    let mut text = ok(fs::read_to_string(f.base.join("state/projects.txt")));
+    text.push_str(&format!("blank|{}\n", f.base.join("blank").display()));
+    ok(fs::write(f.base.join("state/projects.txt"), text));
+    let o = repo(&f, &["blank", "run", "R59X"]);
+    assert!(!o.status.success());
+    let e = String::from_utf8_lossy(&o.stderr).into_owned();
+    assert!(e.contains("cannot tell what kind of project"), "{e}");
 }

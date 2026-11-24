@@ -1,4 +1,4 @@
-//! `repo push` end to end against real repositories and a bare remote. No network.
+//! `actrepo push` end to end against real repositories and a bare remote. No network.
 use std::fs;
 use std::io::Write;
 use std::path::Path;
@@ -56,7 +56,7 @@ fn ahead() -> Fx {
 }
 
 fn push(dir: &Path, args: &[&str], stdin: &str) -> Output {
-    let mut child = ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+    let mut child = ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .arg("push")
         .arg("--dir")
         .arg(dir)
@@ -148,7 +148,7 @@ fn a_missing_directory_fails_loudly() {
 #[test]
 fn the_default_directory_is_the_current_one() {
     let f = ahead();
-    let o = ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+    let o = ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(["push", "--dry-run"])
         .current_dir(&f.repo)
         .output());

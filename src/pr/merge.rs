@@ -1,5 +1,5 @@
-//! `repo pr merge [N] [--yes]` (port of dotfiles `project pr merge`).
-use super::after;
+//! `actrepo pr merge [N] [--yes]` (port of dotfiles `project pr merge`).
+use super::{after, sync};
 use crate::scaffold::setup::Exec;
 use actautoma::forge::{Forge, Mergeable};
 use anyhow::{Result, anyhow, bail};
@@ -63,6 +63,15 @@ pub fn run(
     err: &mut impl Write,
 ) -> Result<()> {
     let mut pr = forge.view_pr(opts.number)?;
+    if pr.mergeable == Mergeable::Conflicting {
+        writeln!(
+            err,
+            "PR #{} conflicts with {}: merging {} into {}.",
+            pr.number, pr.base, pr.base, pr.head
+        )?;
+        sync::update_branch(act, dir, &pr.base, &pr.head, err)?;
+        pr = forge.view_pr(Some(pr.number))?; // the push makes GitHub recompute: Unknown first, polled below
+    }
     // Platforms compute mergeability lazily and answer UNKNOWN just after a push.
     let mut tried = 0;
     while pr.mergeable == Mergeable::Unknown && tried < wait.tries {

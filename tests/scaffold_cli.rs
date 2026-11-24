@@ -1,4 +1,4 @@
-//! `repo check|apply` end to end on temp directories and a temp template tree. No network.
+//! `actrepo check|apply` end to end on temp directories and a temp template tree. No network.
 use std::fs;
 use std::path::Path;
 use std::process::{Command, Output};
@@ -20,7 +20,7 @@ fn templates() -> tempfile::TempDir {
 }
 
 fn repo(root: &Path, cwd: &Path, args: &[&str]) -> Output {
-    Command::new(env!("CARGO_BIN_EXE_repo"))
+    Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(args)
         .current_dir(cwd)
         .env("PROJECT_REPO_ROOT", root)
@@ -160,4 +160,34 @@ fn license_takes_a_path_and_fails_loudly_on_an_unreadable_file() {
     ));
     assert!(!o.status.success());
     assert!(err(&o).contains("cannot read"), "{}", err(&o));
+}
+
+#[test]
+fn apply_in_a_git_repository_installs_the_hook_that_check_then_finds() {
+    let (t, p) = (templates(), ok(tempfile::tempdir()));
+    ok(fs::write(p.path().join("package.json"), "{}"));
+    let init = ok(Command::new("git")
+        .args(["init", "-q", "-b", "main"])
+        .current_dir(p.path())
+        .output());
+    assert!(init.status.success());
+    let o = repo(t.path(), p.path(), &["check"]);
+    assert!(
+        out(&o).contains("  - missing  post-commit hook"),
+        "{}",
+        out(&o)
+    );
+    let o = repo(t.path(), p.path(), &["apply"]);
+    assert!(
+        out(&o).contains("  + wrote      post-commit hook"),
+        "{}",
+        out(&o)
+    );
+    assert!(p.path().join(".git/hooks/post-commit").exists());
+    let o = repo(t.path(), p.path(), &["check"]);
+    assert!(
+        out(&o).contains("  = ok       post-commit hook"),
+        "{}",
+        out(&o)
+    );
 }

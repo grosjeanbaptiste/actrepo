@@ -122,3 +122,30 @@ fn an_outcome_is_split_into_reusable_blocked_and_unreadable() {
     assert_eq!(reuse.unreadable.len(), 1);
     assert!(reuse.unreadable[0].contains("hidden") && reuse.unreadable[0].contains("login wall"));
 }
+
+fn outcome(verdict: Verdict) -> Outcome {
+    let report = Report { verdict, findings: vec![finding("argos", Some("MIT"))], failures: vec![] };
+    let licenses = report
+        .findings
+        .iter()
+        .map(|f| licence(f.candidate.license.as_deref(), &Table::builtin(), &default_allow()))
+        .collect();
+    Outcome { report, licenses }
+}
+
+#[test]
+fn a_candidate_no_documentation_confirms_never_stops_the_creation() {
+    let reuse = reuse_of(&outcome(Verdict::Unconfirmed));
+    assert!(reuse.reusable.is_empty(), "{reuse:?}");
+    assert_eq!(reuse.unconfirmed, [tool("argos", "MIT", "permissive")]);
+    let (got, err) = run(reuse, false);
+    assert!(got.is_ok());
+    assert!(err.contains("argos") && err.contains("not confirmed"), "{err}");
+}
+
+#[test]
+fn a_confirmed_candidate_still_stops_the_creation() {
+    let reuse = reuse_of(&outcome(Verdict::Exists));
+    assert_eq!(reuse.reusable, [tool("argos", "MIT", "permissive")]);
+    assert!(reuse.unconfirmed.is_empty());
+}

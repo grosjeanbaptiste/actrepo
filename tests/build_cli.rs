@@ -21,7 +21,7 @@ fn fx() -> Fx {
     }
     ok(fs::write(base.join("thesis/main.tex"), ""));
     ok(fs::write(
-        base.join("lib/Cargo.toml"),
+        base.join("lib/package.json"),
         "[package]\nname = \"x\"\n",
     ));
     ok(fs::write(
@@ -45,7 +45,7 @@ fn fx() -> Fx {
 }
 
 fn repo(f: &Fx, args: &[&str]) -> Output {
-    ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+    ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(args)
         .env("DOTFILES_STATE_ROOT", f.base.join("state"))
         .env("STAGE", &f.base)
@@ -128,7 +128,7 @@ fn a_markdown_project_declared_in_actmake_toml_builds_through_pandoc_then_the_br
         ));
         ok(fs::set_permissions(&p, fs::Permissions::from_mode(0o755)));
     }
-    let o = ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+    let o = ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
         .args(["doc", "build"])
         .env("DOTFILES_STATE_ROOT", f.base.join("state"))
         .env("STAGE", &f.base)
@@ -154,4 +154,63 @@ fn a_markdown_project_declared_in_actmake_toml_builds_through_pandoc_then_the_br
             .is_some_and(|l| l.contains("--print-to-pdf=") && l.contains("guide.pdf")),
         "{calls}"
     );
+}
+
+fn project(f: &Fx, name: &str, marker: (&str, &str)) {
+    let dir = f.base.join(name);
+    ok(fs::create_dir_all(&dir));
+    ok(fs::write(dir.join(marker.0), marker.1));
+    let state = f.base.join("state/projects.txt");
+    let mut text = ok(fs::read_to_string(&state));
+    text.push_str(&format!("{name}|{}\n", dir.display()));
+    ok(fs::write(&state, text));
+    let tool = f.base.join("bin/dotfiles");
+    ok(fs::write(
+        &tool,
+        "#!/bin/sh\necho \"dotfiles $*\" >> \"$STAGE/calls.log\"\n",
+    ));
+    ok(fs::set_permissions(
+        &tool,
+        fs::Permissions::from_mode(0o755),
+    ));
+}
+
+fn calls(f: &Fx) -> Vec<String> {
+    ok(fs::read_to_string(f.base.join("calls.log")))
+        .lines()
+        .map(String::from)
+        .collect()
+}
+
+#[test]
+fn a_crate_builds_through_the_heavy_queue_in_release() {
+    let f = fx();
+    project(&f, "tool", ("Cargo.toml", "[package]\n"));
+    let o = repo(&f, &["tool", "build", "--release"]);
+    assert!(o.status.success(), "{}", err(&o));
+    assert_eq!(
+        calls(&f),
+        vec!["dotfiles heavy run -- cargo build --release"]
+    );
+}
+
+#[test]
+fn a_flutter_app_builds_for_the_target_given() {
+    let f = fx();
+    project(&f, "app", ("pubspec.yaml", "flutter:\n"));
+    let o = repo(&f, &["app", "build", "--target", "apk"]);
+    assert!(o.status.success(), "{}", err(&o));
+    assert_eq!(
+        calls(&f),
+        vec!["dotfiles heavy run -- flutter build apk --debug"]
+    );
+}
+
+#[test]
+fn a_flutter_app_without_a_target_is_a_usage_error() {
+    let f = fx();
+    project(&f, "app", ("pubspec.yaml", "flutter:\n"));
+    let o = repo(&f, &["app", "build"]);
+    assert!(!o.status.success());
+    assert!(err(&o).contains("pass a target"), "{}", err(&o));
 }

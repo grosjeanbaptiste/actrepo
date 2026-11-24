@@ -22,7 +22,7 @@ fn opts(path: &Path, choice: Choice) -> Opts {
 fn go(o: &Opts, answer: &str, tool: Fake) -> Out {
     let vars = Vars::of(&[("STORES_PYTHON", "/py"), ("STORES_SCRIPTS_DIR", "/s")], &o.path.join("home"));
     let (mut out, mut err) = (vec![], vec![]);
-    let result = run(o, &vars, &tool, &mut answer.as_bytes(), &mut out, &mut err);
+    let result = run(o, &vars, &tool, &crate::deploy::fake::forge(), &mut answer.as_bytes(), &mut out, &mut err);
     Out { result, tool, out: String::from_utf8_lossy(&out).into_owned(), err: String::from_utf8_lossy(&err).into_owned() }
 }
 
@@ -146,7 +146,7 @@ fn store_page_confirms_in_its_own_words_and_never_builds() {
     let vars = Vars::of(&[("STORES_PYTHON", "/py"), ("STORES_SCRIPTS_DIR", "/s"), ("ASC_BUNDLE_ID", "b")], d.path());
     let tool = Fake::default();
     let (mut out, mut err) = (vec![], vec![]);
-    ok(run(&p, &vars, &tool, &mut "y\n".as_bytes(), &mut out, &mut err));
+    ok(run(&p, &vars, &tool, &crate::deploy::fake::forge(), &mut "y\n".as_bytes(), &mut out, &mut err));
     assert_eq!(String::from_utf8_lossy(&out), format!("Push the ios store page from {}/stores? [y/N] ", shown_path(d.path())));
     assert_eq!(tool.runs().len(), 1);
     assert_eq!(tool.runs()[0].args, ["/s/asc_upload.py"]);
@@ -163,4 +163,23 @@ fn store_page_for_all_or_web_fails_after_the_question_like_bash() {
     p.store_page = true;
     let o = go(&p, "", Fake::default());
     assert_eq!(msg(&o), "--store-page applies to ios and android, not 'all'.");
+}
+
+#[test]
+fn mobile_plans_phones_tablets_then_desktops_and_never_web() {
+    let d = project();
+    let mut p = opts(d.path(), Choice::Mobile);
+    p.dry_run = true;
+    let o = go(&p, "", Fake::default());
+    assert!(o.result.is_ok(), "{}", msg(&o));
+    let starts: Vec<&str> = o.out.lines().map(|l| l.split(' ').next().unwrap_or_default()).collect();
+    assert_eq!(starts, ["flutter", "flutter", "macOS", "flutter", "flutter", "flutter"]);
+    assert!(o.tool.runs().is_empty());
+}
+
+#[test]
+fn mobile_goes_on_after_a_failure_and_names_every_failed_target() {
+    let d = ok(tempfile::tempdir());
+    let o = go(&opts(d.path(), Choice::Mobile), "", Fake { failing: vec!["flutter".into()], ..Fake::default() });
+    assert_eq!(msg(&o), "deploy: 6 of 6 target(s) failed (ios, android, mas, homebrew, windows, linux)");
 }

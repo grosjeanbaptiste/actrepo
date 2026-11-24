@@ -1,4 +1,4 @@
-//! `repo deploy` end to end: a real project folder and scripted `flutter`, `xcrun`, `wrangler`, `snapcraft`, `git` and uploaders.
+//! `actrepo deploy` end to end: a real project folder and scripted `flutter`, `xcrun`, `wrangler`, `snapcraft`, `git` and uploaders.
 use std::fs;
 use std::io::Write;
 use std::os::unix::fs::PermissionsExt;
@@ -70,7 +70,7 @@ const DOTFILES: &str =
 impl Fx {
     fn repo(&self, args: &[&str], stdin: &str, extra: &[(&str, &str)]) -> Output {
         let path = format!("{}:/usr/bin:/bin", self.base.join("bin").display());
-        let mut child = ok(Command::new(env!("CARGO_BIN_EXE_repo"))
+        let mut child = ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
             .arg("deploy")
             .args(args)
             .env_clear()
@@ -124,7 +124,7 @@ fn an_invalid_env_or_target_exits_1_naming_the_value() {
     assert_eq!(o.status.code(), Some(1));
     assert!(
         err(&o).contains(
-            "invalid target 'pc' — expected: web ios android mas homebrew windows linux | all"
+            "invalid target 'pc' — expected: web ios android mas homebrew windows linux | mobile | all"
         ),
         "{}",
         err(&o)

@@ -1,4 +1,4 @@
-//! `repo doctor [path]` (port of dotfiles `project doctor`): one-glance project health report.
+//! `actrepo doctor [path]` (port of dotfiles `project doctor`): one-glance project health report.
 pub mod command;
 pub mod date;
 pub mod git;
