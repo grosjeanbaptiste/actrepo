@@ -29,6 +29,7 @@ Used by hand instead:
 | `gh pr list --state open --json …` | `actrepo pr list` | actrepo |
 | `gh pr edit N --base main` | `actrepo pr retarget N --base main` | actrepo |
 | `gh pr close N --comment …` | `actrepo pr close N [--comment]` | actrepo |
+| `gh pr ready N` (`actrepo pr merge` fails with "still a draft" until then; found 2026-11-24 merging actparc #11, #12) | `actrepo pr ready N`, and `pr merge` naming `pr ready` in its draft error | actrepo |
 | `git merge-tree --write-tree BASE HEAD` | `actrepo pr check N` (conflict dry run) | actrepo |
 | merge `origin/main` in a detached worktree, fix, `git push origin HEAD:B` | `actautoma resolve-conflicts N` (worktree, merge, stop on conflict, push) | actautoma |
 | push, `actrepo pr create` with the last subject, `actrepo pr merge --yes` (`ship.sh`) | `actautoma ship` (gates first, merge only where authorised) | actautoma |
