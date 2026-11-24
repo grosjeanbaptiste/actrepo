@@ -57,7 +57,11 @@ impl Exec for Script {
 const BRANCHES: &str = "git branch --format=%(refname:short)";
 
 fn opts(delete_old: bool) -> Opts {
-    Opts { from: "master".into(), to: "main".into(), delete_old }
+    Opts { from: "master".into(), to: "main".into(), delete_old, rewrite: false }
+}
+
+fn rewriting() -> Opts {
+    Opts { rewrite: true, ..opts(false) }
 }
 
 fn local_only() -> Script {
@@ -148,7 +152,7 @@ fn a_remote_default_that_is_not_the_source_is_refused_before_any_change() {
 #[test]
 fn invalid_names_stop_everything_before_any_command() {
     let exec = local_only();
-    let bad = Opts { from: "master".into(), to: "-x".into(), delete_old: false };
+    let bad = Opts { from: "master".into(), to: "-x".into(), delete_old: false, rewrite: false };
     assert!(rename(&exec, &exec.forge, dir().path(), &bad, false).is_err());
     assert!(exec.calls.borrow().is_empty());
 }
@@ -186,14 +190,6 @@ fn files_that_still_say_the_old_name_are_listed_as_warnings() {
 }
 
 #[test]
-fn a_word_is_matched_whole_so_masterpiece_is_not_a_reference() {
-    assert!(mentions("branches: [master]", "master"));
-    assert!(mentions("git checkout master", "master"));
-    assert!(!mentions("a masterpiece", "master"));
-    assert!(!mentions("grandmaster_x", "master"));
-}
-
-#[test]
 fn a_failing_platform_lookup_is_an_error_and_changes_nothing() {
     let (exec, d) = (with_origin("master").failing_platform("view_repo"), dir());
     let err = rename(&exec, &exec.forge, d.path(), &opts(false), false).err().unwrap_or_else(|| panic!("expected an error: {}", "view_repo")).to_string();
@@ -217,4 +213,52 @@ fn the_default_branch_is_switched_before_the_old_one_is_deleted() {
     let log = exec.mutating();
     let at = |what: &str| log.iter().position(|c| c.starts_with(what));
     assert!(at("set_default_branch") < at("git push origin --delete"), "{log:?}");
+}
+
+/// A repo whose tracked files name `master` in a workflow, in a doc and in prose.
+fn repo_with_references() -> (Script, tempfile::TempDir) {
+    let d = dir();
+    fs::create_dir_all(d.path().join(".github")).unwrap_or_else(|e| panic!("{e}"));
+    fs::write(d.path().join(".github/ci.yml"), "on:\n  push:\n    branches: [master]\n").unwrap_or_else(|e| panic!("{e}"));
+    fs::write(d.path().join("DOC.md"), "pushed to the `master` branch\r\nMémoire de master\n").unwrap_or_else(|e| panic!("{e}"));
+    let mut exec = local_only();
+    exec.answers.push(("git ls-files", Ok(".github/ci.yml\nDOC.md\n".into())));
+    (exec, d)
+}
+
+#[test]
+fn without_rewrite_the_files_are_left_alone_and_every_line_is_a_warning() {
+    let (exec, d) = repo_with_references();
+    let out = rename(&exec, &exec.forge, d.path(), &opts(false), false).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(out.warnings.len(), 3, "{:?}", out.warnings);
+    assert!(out.rewritten.is_empty());
+    assert!(fs::read_to_string(d.path().join(".github/ci.yml")).unwrap_or_default().contains("[master]"));
+}
+
+#[test]
+fn rewrite_changes_the_branch_references_and_warns_about_the_prose() {
+    let (exec, d) = repo_with_references();
+    let out = rename(&exec, &exec.forge, d.path(), &rewriting(), false).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(out.rewritten.len(), 2, "{:?}", out.rewritten);
+    assert_eq!(out.warnings.len(), 1, "{:?}", out.warnings);
+    assert!(out.warnings[0].starts_with("DOC.md:2:"), "{}", out.warnings[0]);
+    let read = |f: &str| fs::read_to_string(d.path().join(f)).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(read(".github/ci.yml"), "on:\n  push:\n    branches: [main]\n");
+    assert_eq!(read("DOC.md"), "pushed to the `main` branch\r\nMémoire de master\n");
+}
+
+#[test]
+fn a_dry_run_reports_the_rewrites_and_writes_nothing() {
+    let (exec, d) = repo_with_references();
+    let out = rename(&exec, &exec.forge, d.path(), &rewriting(), true).unwrap_or_else(|e| panic!("{e}"));
+    assert_eq!(out.rewritten.len(), 2);
+    assert!(fs::read_to_string(d.path().join(".github/ci.yml")).unwrap_or_default().contains("[master]"));
+}
+
+#[test]
+fn a_failing_step_leaves_the_files_as_they_were() {
+    let (mut exec, d) = repo_with_references();
+    exec.answers.push(("git branch -m master main", Err("boom".into())));
+    assert!(rename(&exec, &exec.forge, d.path(), &rewriting(), false).is_err());
+    assert!(fs::read_to_string(d.path().join(".github/ci.yml")).unwrap_or_default().contains("[master]"));
 }

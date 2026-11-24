@@ -11,6 +11,7 @@ fn b(name: &str, ahead: u32, behind: u32) -> Branch {
         checked_out: false,
         dirty: false,
         default_branch: false,
+        elsewhere: None,
     }
 }
 
@@ -156,4 +157,29 @@ fn each_step_has_a_one_line_report() {
     let mut x = b("d", 1, 0);
     x.upstream = None;
     assert_eq!(plan(&[x])[0].line(), "/r/app d: skip, no upstream");
+}
+
+#[test]
+fn pull_only_keeps_pulls_and_divergences_and_drops_pushes_and_skips() {
+    let mut no_upstream = b("c", 0, 0);
+    no_upstream.upstream = None;
+    let steps = plan(&[b("a", 2, 0), b("b", 0, 3), b("d", 1, 1), no_upstream]);
+    assert_eq!(steps.len(), 4);
+    let kept = pull_only(steps);
+    assert_eq!(kept.len(), 2, "{kept:?}");
+    assert!(matches!(kept[0], Step::Pull { .. }), "{kept:?}");
+    assert!(matches!(kept[1], Step::Diverged { .. }), "{kept:?}");
+}
+
+#[test]
+fn a_pull_of_a_branch_checked_out_in_another_worktree_is_skipped_with_its_path() {
+    let mut other = b("a", 0, 3);
+    other.elsewhere = Some(PathBuf::from("/r/other"));
+    let steps = plan(&[other]);
+    assert_eq!(steps.len(), 1);
+    let line = steps[0].line();
+    assert!(
+        matches!(steps[0], Step::Skip { .. }) && line.contains("checked out in /r/other"),
+        "{line}"
+    );
 }

@@ -1,5 +1,6 @@
 //! Checks, then runs, the rename of a repository's branch (see `plan`).
 use super::plan::{Opts, Step, plan, validate};
+use super::refs::{mentions, rewritten};
 use crate::scaffold::setup::Exec;
 use actautoma::forge::Forge;
 use anyhow::{Result, anyhow, bail};
@@ -12,6 +13,8 @@ pub struct Outcome {
     pub steps: Vec<Step>,
     /// Tracked files that still name the old branch: `file:line:text`.
     pub warnings: Vec<String>,
+    /// Lines rewritten to the new name (on a dry run: that would be): `file:line:text`.
+    pub rewritten: Vec<String>,
     pub executed: bool,
     /// The target already exists and the source does not: nothing to do.
     pub already: bool,
@@ -49,18 +52,22 @@ fn remote_slug(
     Ok(Some(repo.slug))
 }
 
-/// Whole-word match, as `git grep -w`: word characters are letters, digits, `_`.
-pub fn mentions(line: &str, word: &str) -> bool {
-    let is_word = |c: char| c.is_alphanumeric() || c == '_';
-    line.match_indices(word).any(|(i, _)| {
-        let before = line[..i].chars().next_back();
-        let after = line[i + word.len()..].chars().next();
-        !before.is_some_and(is_word) && !after.is_some_and(is_word)
-    })
+/// What the tracked files say about the old branch name.
+struct Scan {
+    /// Lines rewritten (or, on a dry run, that would be): `file:line:new text`.
+    rewrites: Vec<String>,
+    /// Lines that still name it, left as they are: `file:line:text`.
+    warnings: Vec<String>,
+    /// The new text of each file that changes.
+    files: Vec<(String, String)>,
 }
 
-fn references(exec: &dyn Exec, path: &Path, word: &str) -> Result<Vec<String>> {
-    let mut found = Vec::new();
+fn scan(exec: &dyn Exec, path: &Path, o: &Opts) -> Result<Scan> {
+    let mut found = Scan {
+        rewrites: vec![],
+        warnings: vec![],
+        files: vec![],
+    };
     for name in git_lines(exec, path, &["ls-files"])? {
         if name.ends_with(".lock") {
             continue; // lock files hold dependency data, never a branch to follow
@@ -69,12 +76,42 @@ fn references(exec: &dyn Exec, path: &Path, word: &str) -> Result<Vec<String>> {
             Ok(text) => text,
             Err(e) if e.kind() == ErrorKind::InvalidData => continue, // binary file: no reference to read
             Err(e) => {
-                found.push(format!("{name}: not scanned: {e}"));
+                found.warnings.push(format!("{name}: not scanned: {e}"));
                 continue;
             }
         };
-        for (n, line) in text.lines().enumerate().filter(|(_, l)| mentions(l, word)) {
-            found.push(format!("{name}:{}:{}", n + 1, line.trim()));
+        let in_github = name.starts_with(".github/");
+        let (mut changed, mut out) = (false, String::with_capacity(text.len()));
+        for (n, raw) in text.split_inclusive('\n').enumerate() {
+            let line = raw.trim_end_matches(['\n', '\r']);
+            let ending = &raw[line.len()..];
+            if !mentions(line, &o.from) {
+                out.push_str(raw);
+                continue;
+            }
+            match o
+                .rewrite
+                .then(|| rewritten(line, &o.from, &o.to, in_github))
+                .flatten()
+            {
+                Some(new) => {
+                    found
+                        .rewrites
+                        .push(format!("{name}:{}:{}", n + 1, new.trim()));
+                    out.push_str(&new);
+                    out.push_str(ending);
+                    changed = true;
+                }
+                None => {
+                    found
+                        .warnings
+                        .push(format!("{name}:{}:{}", n + 1, line.trim()));
+                    out.push_str(raw);
+                }
+            }
+        }
+        if changed {
+            found.files.push((name, out));
         }
     }
     Ok(found)
@@ -118,6 +155,7 @@ pub fn rename(
     let none = |already| Outcome {
         steps: vec![],
         warnings: vec![],
+        rewritten: vec![],
         executed: false,
         already,
     };
@@ -135,14 +173,21 @@ pub fn rename(
         );
     }
     let slug = remote_slug(exec, forge, path, &o.from)?;
-    let warnings = references(exec, path, &o.from)?;
+    let found = scan(exec, path, o)?;
     let steps = plan(o, slug.as_deref());
     if !dry_run {
         execute(exec, forge, path, &steps)?;
+        // After the branch is renamed, so a failed step leaves the files as they were.
+        for (name, text) in &found.files {
+            fs::write(path.join(name), text).map_err(|e| {
+                anyhow!("rewriting {name} failed: {e}; the branch is already renamed")
+            })?;
+        }
     }
     Ok(Outcome {
         steps,
-        warnings,
+        warnings: found.warnings,
+        rewritten: found.rewrites,
         executed: !dry_run,
         already: false,
     })

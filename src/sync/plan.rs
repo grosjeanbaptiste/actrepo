@@ -12,6 +12,8 @@ pub struct Branch {
     pub checked_out: bool,
     pub dirty: bool,
     pub default_branch: bool,
+    /// The other working tree this branch is checked out in, when it is not this one.
+    pub elsewhere: Option<PathBuf>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -46,6 +48,15 @@ pub fn plan(branches: &[Branch]) -> Vec<Step> {
     branches.iter().filter_map(step).collect()
 }
 
+/// Keeps what only reads from the remote: pulls, and divergences (reported, never acted on).
+/// A session start uses it so that nothing is pushed through a gate.
+pub fn pull_only(steps: Vec<Step>) -> Vec<Step> {
+    steps
+        .into_iter()
+        .filter(|s| matches!(s, Step::Pull { .. } | Step::Diverged { .. }))
+        .collect()
+}
+
 fn step(b: &Branch) -> Option<Step> {
     let (repo, branch) = (b.repo.clone(), b.name.clone());
     let skip = |why: &str| {
@@ -73,6 +84,13 @@ fn step(b: &Branch) -> Option<Step> {
             count,
         }),
         _ if b.checked_out && b.dirty => skip("dirty tree"),
+        _ if b.elsewhere.is_some() => skip(&format!(
+            "checked out in {}",
+            b.elsewhere
+                .as_deref()
+                .map(|p| p.display().to_string())
+                .unwrap_or_default()
+        )),
         (_, count) => Some(Step::Pull {
             repo,
             branch,

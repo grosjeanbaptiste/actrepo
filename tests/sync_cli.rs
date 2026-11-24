@@ -188,3 +188,104 @@ fn a_clean_checked_out_branch_that_is_behind_is_pulled() {
     );
     assert_eq!(git(&f.work, &["rev-parse", "main"]), remote_sha(&f, "main"));
 }
+
+#[test]
+fn pull_only_pulls_the_behind_branches_and_pushes_nothing() {
+    let f = fx();
+    let pushed_before: Vec<String> = ["p1", "p2", "p3"]
+        .iter()
+        .map(|b| remote_sha(&f, b))
+        .collect();
+    let o = sync(&f, &["--pull-only"]);
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    for n in ["l1", "l2", "l3"] {
+        assert_eq!(
+            git(&f.work, &["rev-parse", n]),
+            remote_sha(&f, n),
+            "{n} pulled"
+        );
+    }
+    let pushed_after: Vec<String> = ["p1", "p2", "p3"]
+        .iter()
+        .map(|b| remote_sha(&f, b))
+        .collect();
+    assert_eq!(pushed_before, pushed_after, "nothing may be pushed");
+    let t = out(&sync(&f, &["--pull-only", "--dry-run"]));
+    assert!(!t.contains(": push "), "{t}");
+}
+
+fn sync_in(dir: &Path, args: &[&str]) -> Output {
+    ok(Command::new(env!("CARGO_BIN_EXE_actrepo"))
+        .arg("sync")
+        .args(args)
+        .arg(dir)
+        .output())
+}
+
+#[test]
+fn here_works_from_a_subfolder_and_pulls_only_the_enclosing_repository() {
+    let f = fx();
+    let sub = f.work.join("sub");
+    ok(fs::create_dir_all(&sub));
+    let nested = f.work.join("nested");
+    ok(fs::create_dir_all(&nested));
+    git(&nested, &["init", "-q", "-b", "main"]);
+    commit(&nested, "n");
+    let o = sync_in(&sub, &["--pull-only", "--here"]);
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    for n in ["l1", "l2", "l3"] {
+        assert_eq!(
+            git(&f.work, &["rev-parse", n]),
+            remote_sha(&f, n),
+            "{n} pulled"
+        );
+    }
+    let plan = out(&sync_in(&sub, &["--here", "--dry-run"]));
+    assert!(
+        !plan.contains("nested"),
+        "nothing below the repository is scanned: {plan}"
+    );
+    let scanned = out(&sync_in(&f.work, &["--dry-run"]));
+    assert!(
+        scanned.contains("nested"),
+        "without --here the nested repository is planned: {scanned}"
+    );
+}
+
+#[test]
+fn here_outside_a_repository_succeeds_and_says_so() {
+    let d = ok(tempfile::tempdir());
+    let o = sync_in(d.path(), &["--pull-only", "--here"]);
+    assert!(o.status.success(), "{}", String::from_utf8_lossy(&o.stderr));
+    assert!(out(&o).contains("not in a git repository"), "{}", out(&o));
+}
+
+#[test]
+fn pull_only_notes_a_diverged_branch_and_still_succeeds_while_plain_sync_fails() {
+    let f = fx();
+    git(&f.work, &["checkout", "-q", "-b", "dv", "main"]);
+    commit(&f.work, "local-dv");
+    git(&f.work, &["push", "-q", "-u", "origin", "dv"]);
+    let other = f.work.parent().map(|p| p.join("other")).unwrap_or_default();
+    git(&other, &["fetch", "-q", "origin"]);
+    git(&other, &["checkout", "-q", "-B", "dv", "origin/dv"]);
+    commit(&other, "remote-dv");
+    git(&other, &["push", "-q", "origin", "dv"]);
+    git(&f.work, &["reset", "-q", "--soft", "HEAD~1"]);
+    git(&f.work, &["commit", "-q", "-m", "rewritten-dv"]);
+    git(&f.work, &["fetch", "-q", "origin"]);
+    git(&f.work, &["checkout", "-q", "main"]);
+    let o = sync(&f, &["--pull-only"]);
+    assert!(
+        o.status.success(),
+        "{}\n{}",
+        out(&o),
+        String::from_utf8_lossy(&o.stderr)
+    );
+    assert!(out(&o).contains("note"), "{}", out(&o));
+    assert!(out(&o).contains("dv: diverged"), "{}", out(&o));
+    assert!(
+        !sync(&f, &[]).status.success(),
+        "plain sync still needs a human"
+    );
+}

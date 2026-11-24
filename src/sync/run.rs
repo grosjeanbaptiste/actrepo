@@ -1,10 +1,10 @@
 //! `actrepo sync [--dry-run] [DIR]`: fetch, read every branch of every repository, plan, then act.
 use super::{
-    exec::execute,
-    plan::{Branch, plan},
+    exec::{execute, execute_noting},
+    plan::{Branch, plan, pull_only},
     read::{Facts, parse},
 };
-use crate::push::rows::collect;
+use crate::push::rows::{Row, collect, enclosing};
 use crate::scaffold::setup::Exec;
 use anyhow::{Context, Result};
 use std::io::Write;
@@ -28,7 +28,7 @@ fn branches(exec: &impl Exec, repo: &Path, err: &mut impl Write) -> Result<Vec<B
         repo,
         &[
             "for-each-ref",
-            "--format=%(refname:short)%09%(upstream:short)%09%(upstream:track,nobracket)",
+            "--format=%(refname:short)%09%(upstream:short)%09%(upstream:track,nobracket)%09%(worktreepath)",
             "refs/heads",
         ],
     )?;
@@ -57,16 +57,43 @@ fn branches(exec: &impl Exec, repo: &Path, err: &mut impl Write) -> Result<Vec<B
     parse(repo, &facts)
 }
 
+/// What `actrepo sync` was asked: which steps to keep and how far to look.
+#[derive(Clone, Copy, Default)]
+pub struct Opts {
+    pub dry_run: bool,
+    /// Keep only the pulls (nothing is pushed).
+    pub pull_only: bool,
+    /// Only the repository containing the folder; nothing below it is scanned.
+    pub here: bool,
+}
+
+/// The repositories to settle: everything under `dir`, or only the enclosing one.
+fn repositories(
+    exec: &impl Exec,
+    dir: &Path,
+    here: bool,
+    warnings: &mut Vec<String>,
+) -> Result<Vec<Row>> {
+    if here {
+        return Ok(enclosing(exec, dir)?.into_iter().collect());
+    }
+    collect(exec, dir, warnings)
+}
+
 /// Prints the plan, then runs it unless `dry_run`. Fails when any step failed or needs a human.
 pub fn run(
     dir: &Path,
-    dry_run: bool,
+    opts: Opts,
     exec: &impl Exec,
     out: &mut impl Write,
     err: &mut impl Write,
 ) -> Result<()> {
     let mut warnings = Vec::new();
-    let rows = collect(exec, dir, &mut warnings)?;
+    let rows = repositories(exec, dir, opts.here, &mut warnings)?;
+    if rows.is_empty() {
+        writeln!(out, "not in a git repository: nothing to sync")?;
+        return Ok(());
+    }
     for w in warnings {
         writeln!(err, "warn: {w}")?;
     }
@@ -74,8 +101,12 @@ pub fn run(
     for row in &rows {
         all.extend(branches(exec, &row.repo, err).with_context(|| row.repo.display().to_string())?);
     }
-    let steps = plan(&all);
-    if dry_run {
+    let steps = if opts.pull_only {
+        pull_only(plan(&all))
+    } else {
+        plan(&all)
+    };
+    if opts.dry_run {
         for s in &steps {
             writeln!(out, "plan {}", s.line())?;
         }
@@ -83,6 +114,9 @@ pub fn run(
             writeln!(out, "nothing to sync")?;
         }
         return Ok(());
+    }
+    if opts.pull_only {
+        return execute_noting(&steps, exec, out);
     }
     execute(&steps, exec, out)
 }

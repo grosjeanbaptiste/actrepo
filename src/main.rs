@@ -105,6 +105,11 @@ enum Cmd {
         /// Also delete the old branch on origin (irreversible).
         #[arg(long)]
         delete_old: bool,
+        /// Rewrite the references to the old name in the tracked files: every whole-word
+        /// match under `.github/`, and `origin/OLD`, `heads/OLD`, "OLD branch", "branch OLD"
+        /// elsewhere. Other lines are still listed as warnings.
+        #[arg(long)]
+        rewrite: bool,
     },
     /// Rename a repository everywhere: platform, origin, folder, written references, registry.
     Rename {
@@ -159,6 +164,12 @@ enum Cmd {
         /// Print the plan; touch nothing.
         #[arg(long, short = 'n')]
         dry_run: bool,
+        /// Only fast-forward what is behind (nothing is pushed): what a session start runs.
+        #[arg(long)]
+        pull_only: bool,
+        /// Only the repository containing DIR, nothing below it is scanned (fast: for a session start).
+        #[arg(long)]
+        here: bool,
     },
     /// Pull requests: create one from the current branch, merge one and update the local branches, view, list, retarget or close.
     Pr {
@@ -205,7 +216,7 @@ enum Cmd {
     Deploy {
         /// prod | test
         env: String,
-        /// web | ios | android | mas | homebrew | windows | linux | all
+        /// web | ios | android | mas | homebrew | windows | linux | mobile | all
         target: String,
         /// Project directory.
         #[arg(default_value = ".")]
@@ -426,11 +437,20 @@ fn main() -> Result<()> {
             HookCmd::Run => hook::command::run_detached(),
             HookCmd::Sync => hook::command::run_sync(),
         },
-        Cmd::Sync { dir, dry_run } => {
+        Cmd::Sync {
+            dir,
+            dry_run,
+            pull_only,
+            here,
+        } => {
             let (mut out, mut err) = (std::io::stdout().lock(), std::io::stderr().lock());
             sync::run::run(
                 Path::new(&dir),
-                dry_run,
+                sync::run::Opts {
+                    dry_run,
+                    pull_only,
+                    here,
+                },
                 &scaffold::native::Process,
                 &mut out,
                 &mut err,
@@ -526,7 +546,8 @@ fn main() -> Result<()> {
             to,
             dry_run,
             delete_old,
-        } => branch::command::run(&path, &from, &to, dry_run, delete_old),
+            rewrite,
+        } => branch::command::run(&path, &from, &to, dry_run, delete_old, rewrite),
         Cmd::Rename {
             slug,
             new,

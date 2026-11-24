@@ -8,6 +8,23 @@ Manage git repositories by reusing what exists:
 - **Prerequisites:** `git` and `gh` on `PATH`; templates are read from `~/Source/dotfiles/project-templates` (`PROJECT_REPO_ROOT` / `DOTFILES_REPO_ROOT` override the root).
 - **actit** (Rust library, pinned by commit) checks that the name is free on GitHub, under any owner, through `gh`.
 
+## Contents
+
+- [How it works](#how-it-works)
+- [Install](#install)
+- [Usage](#usage)
+- [Checks](#checks)
+
+## How it works
+
+```mermaid
+flowchart LR
+    actrepo["actrepo"] --> actname["actname: names the repository"]
+    actrepo --> scaffold["src/scaffold/: mkdir, git init, templates, commit, private GitHub repo via gh"]
+    actrepo --> actit["actit: name free on GitHub?"]
+    actrepo -. "tex, docker, db, redis, flutter-device" .-> dot["dotfiles project"]
+```
+
 ## Install
 
 Needs Rust 1.85 or newer, SSH access to GitHub (the actname and actit libraries are
@@ -40,9 +57,9 @@ actrepo actname generate --prefix act --domain "<words>" [...]   # actname in-pr
 actrepo actautoma rename-repo OWNER/OLD NEW [--dir D] [--dry-run] # actautoma in-process (what `actrepo rename` wraps)
 actrepo rename OWNER/OLD NEW [--dir DIR] [--into PARENT] [--local-only] [--dry-run]   # a repository renamed everywhere: platform, origin, folder, written references, registry row
 actrepo move DIR --into PARENT [--fleet DIR]... [--dry-run]   # a folder and every repository under it (worktrees included) moved in one step; repos found by scanning, every path written in them corrected (actautoma move)
-actrepo rename-branch [PATH] [--from master] [--to main] [--dry-run] [--delete-old]   # default branch, local + GitHub
+actrepo rename-branch [PATH] [--from master] [--to main] [--dry-run] [--delete-old] [--rewrite]   # default branch, local + GitHub; --rewrite edits the references in tracked files (all of `.github/`, `origin/OLD`, `heads/OLD`, "OLD branch" elsewhere), the rest stays a `warn:` line; nothing is committed
 actrepo push [--dir PATH] [--dry-run] [--yes]      # push every nested repo that is clean and ahead; asks first
-actrepo sync [DIR] [-n]                                 # every branch of every repo under DIR: push what is ahead, fast-forward what is behind (fetch first), report diverged, dirty and upstream-less branches; one failure never stops the others, exit non-zero when any step failed or needs a human; the default branch is never pushed; -n prints the plan only
+actrepo sync [DIR] [-n] [--pull-only] [--here]          # (--here: only the repository containing DIR, nothing scanned below it, success outside a repository: what a session start runs, fast) (--pull-only: only fast-forward what is behind, push nothing: what a session start runs) every branch of every repo under DIR: push what is ahead, fast-forward what is behind (fetch first), report diverged, dirty and upstream-less branches; one failure never stops the others, exit non-zero when any step failed or needs a human; the default branch is never pushed; -n prints the plan only A branch whose upstream has another name is fetched by that name; a branch checked out in another worktree is skipped (the path is named); with --pull-only a diverged or skipped branch is printed as `note` and does not fail the run.
 actrepo pr create [--base B] [--title T] [--body D]    # PR for the current branch; title/description asked on stdin if not given
 actrepo pr merge [N] [--yes]                           # merge commit (a CONFLICTING branch first gets the base merged into it; unresolvable conflicts are refused), branch deleted, base fast-forwarded locally, then, only once the head is verified contained in origin/BASE: the clean worktree holding it, the local branch and a leftover remote branch removed (a worktree with changes is kept, with a warning)
 actrepo pr view [N]                                    # title, branches, author, state and mergeability of a PR (the current branch's when N is omitted)

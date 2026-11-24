@@ -7,6 +7,8 @@ pub struct Opts {
     pub to: String,
     /// Also delete the old branch on `origin`: irreversible, so never the default.
     pub delete_old: bool,
+    /// Rewrite the references to `from` in the tracked files (see `refs`).
+    pub rewrite: bool,
 }
 
 /// One step of the rename: a `git` command, or an operation on the hosting platform.
