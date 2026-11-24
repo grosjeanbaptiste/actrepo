@@ -43,6 +43,12 @@ pub fn prune_and_refresh(
     Ok(())
 }
 
+pub fn run_new(branch: &str, base: &str) -> Result<()> {
+    let path = super::new::create(&Process, Path::new("."), branch, base)?;
+    println!("{}", path.display());
+    Ok(())
+}
+
 pub fn run_list(as_json: bool, with_owners: bool) -> Result<()> {
     let mut all = list(&Quiet, Path::new("."))?;
     if with_owners {
