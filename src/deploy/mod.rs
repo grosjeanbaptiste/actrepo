@@ -9,6 +9,7 @@ pub mod ctx;
 #[cfg(test)]
 mod fake;
 pub mod find;
+pub mod macos_export;
 pub mod msstore;
 pub mod native;
 pub mod play;
