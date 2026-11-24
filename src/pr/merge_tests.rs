@@ -31,11 +31,12 @@ fn an_invalid_wait_variable_fails_loudly_naming_it() {
 struct Git {
     calls: RefCell<Vec<String>>,
     fail: Option<&'static str>,
+    sha: &'static str,
 }
 
 impl Git {
     fn new() -> Self {
-        Self { calls: RefCell::new(vec![]), fail: None }
+        Self { calls: RefCell::new(vec![]), fail: None, sha: "abc1234def" }
     }
     fn failing(mut self, prefix: &'static str) -> Self {
         self.fail = Some(prefix);
@@ -52,6 +53,9 @@ impl Exec for Git {
         self.calls.borrow_mut().push(line.clone());
         if self.fail.is_some_and(|p| line.starts_with(p)) {
             anyhow::bail!("{line} failed");
+        }
+        if line == "git rev-parse --verify HEAD" {
+            return Ok(format!("{}\n", self.sha));
         }
         if line == "git worktree list --porcelain" {
             return Ok("worktree /repo\n".into()); // every repository has a main worktree
@@ -184,7 +188,8 @@ fn a_real_content_conflict_is_refused_naming_the_cause_and_pushes_nothing() {
     assert!(r.err.contains("conflicts with main"), "{}", r.err);
     let log = g.log();
     assert!(log.iter().any(|l| l == "git merge --abort"), "{log:?}");
-    assert!(!log.iter().any(|l| l.starts_with("git push")), "{log:?}");
+    let pushes_the_branch = |l: &&String| l.starts_with("git push") && !l.contains("refs/backup");
+    assert!(!log.iter().any(|l| pushes_the_branch(&l)), "{log:?}"); // only the backup copy leaves
     assert!(log.iter().any(|l| l.starts_with("git worktree remove --force")), "{log:?}");
     assert!(!merged(&f));
 }
@@ -192,10 +197,10 @@ fn a_real_content_conflict_is_refused_naming_the_cause_and_pushes_nothing() {
 #[test]
 fn a_failing_push_of_the_updated_branch_fails_loudly_and_merges_nothing() {
     let f = FakeForge::pr("Add x", Conflicting);
-    let g = Git::new().failing("git push");
+    let g = Git::new().failing("git push origin HEAD:feature");
     let r = go(yes(Some(8)), QUICK, &f, &g, "");
     assert!(r.result.is_err());
-    assert!(r.err.contains("could not push"), "{}", r.err);
+    assert!(r.err.contains("could not push the updated"), "{}", r.err);
     assert!(g.log().iter().any(|l| l.starts_with("git worktree remove --force")));
     assert!(!merged(&f));
 }
@@ -271,4 +276,38 @@ fn a_failing_local_update_fails_the_command_after_the_merge() {
     assert!(merged(&f));
     assert!(r.err.contains("warning: PR merged; git fetch failed."), "{}", r.err);
     assert!(r.result.is_err());
+}
+
+#[test]
+fn the_original_tip_is_pushed_to_a_backup_ref_before_the_base_is_merged_in() {
+    let f = FakeForge::pr("Add x", Conflicting).polling(&[Unknown, Mergeable::Mergeable]);
+    let g = Git::new();
+    go(yes(Some(8)), QUICK, &f, &g, "");
+    let log = g.log();
+    let at = |p: &str| log.iter().position(|l| l == p);
+    let backup = at("git push origin HEAD:refs/backup/feature/abc1234def");
+    assert!(backup.is_some(), "{log:?}");
+    assert!(backup < log.iter().position(|l| l.starts_with("git merge --no-edit")), "{log:?}");
+}
+
+#[test]
+fn a_failing_backup_push_stops_before_the_merge_and_the_push() {
+    let f = FakeForge::pr("Add x", Conflicting);
+    let g = Git::new().failing("git push origin HEAD:refs/backup");
+    let r = go(yes(Some(8)), QUICK, &f, &g, "");
+    assert!(r.result.is_err() && !merged(&f));
+    assert!(r.err.contains("could not push the backup of feature"), "{}", r.err);
+    let log = g.log();
+    assert!(!log.iter().any(|l| l.starts_with("git merge")), "{log:?}");
+    assert!(log.iter().any(|l| l.starts_with("git worktree remove --force")), "{log:?}");
+}
+
+#[test]
+fn an_unreadable_tip_stops_before_any_push() {
+    let f = FakeForge::pr("Add x", Conflicting);
+    let mut g = Git::new();
+    g.sha = "";
+    let r = go(yes(Some(8)), QUICK, &f, &g, "");
+    assert!(r.result.is_err() && !merged(&f));
+    assert!(!g.log().iter().any(|l| l.starts_with("git push")), "{:?}", g.log());
 }

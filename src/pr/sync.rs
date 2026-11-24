@@ -56,6 +56,7 @@ fn merge_and_push(
     err: &mut impl Write,
 ) -> Result<()> {
     let git = |args: &[&str]| act.run("git", args, Some(tmp));
+    save_original(act, tmp, head, err)?; // no merge into the branch without the copy
     if git(&["merge", "--no-edit", &format!("origin/{base}")]).is_err() {
         if let Err(e) = git(&["merge", "--abort"]) {
             writeln!(err, "warning: git merge --abort failed: {e}")?;
@@ -66,6 +67,22 @@ fn merge_and_push(
     if git(&["push", "origin", &format!("HEAD:{head}")]).is_err() {
         writeln!(err, "could not push the updated {head}.")?;
         bail!("git push failed");
+    }
+    Ok(())
+}
+
+/// Push the current tip of `head` (the checkout in `tmp`) to `refs/backup/<head>/<tip>`.
+fn save_original(act: &impl Exec, tmp: &Path, head: &str, err: &mut impl Write) -> Result<()> {
+    let tip = act.run("git", &["rev-parse", "--verify", "HEAD"], Some(tmp))?;
+    let tip = tip.trim();
+    if tip.is_empty() {
+        writeln!(err, "could not read the tip of {head} to copy it.")?;
+        bail!("git rev-parse --verify HEAD returned no commit");
+    }
+    let to = format!("HEAD:refs/backup/{head}/{tip}");
+    if act.run("git", &["push", "origin", &to], Some(tmp)).is_err() {
+        writeln!(err, "could not push the backup of {head}.")?;
+        bail!("git push of the backup of {head} failed");
     }
     Ok(())
 }
