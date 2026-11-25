@@ -96,10 +96,19 @@ fn test_with_a_dmg_publishes_a_beta_release_instead_of_bumping_a_hosted_url() {
 }
 
 #[test]
-fn prod_ignores_the_dmg() {
+fn prod_with_a_dmg_publishes_the_stable_release_instead_of_bumping_a_hosted_url() {
     let d = project(true, Some("1.0.0"));
-    let (_, t) = go(d.path(), Env::Prod, &[("BREW_DMG", "/nope.dmg")], Fake::default());
+    let (r, t) = go(d.path(), Env::Prod, &[("BREW_DMG", "/nope.dmg")], Fake::default());
+    assert!(message(&r).starts_with("set BREW_TAP_DIR") || message(&r).starts_with("BREW_DMG not found"), "{}", message(&r));
+    assert!(t.runs().is_empty());
+}
+
+#[test]
+fn prod_without_a_dmg_still_bumps_the_hosted_url_and_never_builds() {
+    let d = project(true, Some("1.0.0"));
+    let (_, t) = go(d.path(), Env::Prod, &[], Fake::default());
     assert!(t.lines()[0].ends_with("--channel stable"));
+    assert_eq!(t.runs().len(), 1);
 }
 
 fn bare(root: &std::path::Path, env: Env, extra: &[(&str, &str)], tool: Fake) -> (Result<()>, Fake) {

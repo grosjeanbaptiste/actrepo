@@ -38,6 +38,10 @@ fn go(c: &Case, extra: &[(&str, &str)], tool: Fake) -> (Result<()>, Fake) {
 }
 
 fn go_forge(c: &Case, extra: &[(&str, &str)], tool: Fake, forge: FakeForge) -> (Result<()>, Fake, FakeForge) {
+    go_env(Env::Test, c, extra, tool, forge)
+}
+
+fn go_env(env: Env, c: &Case, extra: &[(&str, &str)], tool: Fake, forge: FakeForge) -> (Result<()>, Fake, FakeForge) {
     let (dmg, tap) = (c.proj.path().join("a.dmg"), c.tap.path().to_path_buf());
     let base = [
         ("BREW_DMG", dmg.to_str().unwrap_or_default()),
@@ -49,7 +53,7 @@ fn go_forge(c: &Case, extra: &[(&str, &str)], tool: Fake, forge: FakeForge) -> (
     let vars = Vars::of(&[&base[..], extra].concat(), &home);
     let (mut out, mut err) = (vec![], vec![]);
     let result = {
-        let mut ctx = Ctx { env: Env::Test, root: c.proj.path(), vars: &vars, tool: &tool, forge: &forge, out: &mut out, err: &mut err };
+        let mut ctx = Ctx { env, root: c.proj.path(), vars: &vars, tool: &tool, forge: &forge, out: &mut out, err: &mut err };
         publish(&mut ctx)
     };
     (result, tool, forge)
@@ -176,4 +180,47 @@ fn the_repository_and_the_app_can_be_overridden() {
     let rel = f.calls.borrow()[0].clone();
     assert!(rel.starts_with("create_release o/r v1.2.3-beta.42 "));
     assert!(rel.ends_with("X-1.2.3-beta.42.dmg"));
+}
+
+#[test]
+fn prod_publishes_the_stable_release_then_bumps_the_stable_cask_then_commits() {
+    let c = case(true);
+    let (r, t, f) = go_env(Env::Prod, &c, &[], Fake::default(), forge());
+    assert!(r.is_ok(), "{}", message(&r));
+    let rel = f.calls.borrow().clone();
+    assert_eq!(rel.len(), 1, "{rel:?}");
+    assert!(rel[0].starts_with("create_release acteble/homebrew-acteble v1.2.3 "), "{}", rel[0]);
+    assert!(!rel[0].contains("prerelease"), "{}", rel[0]);
+    assert!(rel[0].ends_with("Acteble-1.2.3.dmg"), "{}", rel[0]);
+    let l = t.lines();
+    assert_eq!(l.len(), 3, "{l:?}");
+    assert!(l[0].starts_with("/py /s/update_brew.py --version 1.2.3 --app-url https://github.com/acteble/homebrew-acteble/releases/download/v1.2.3/Acteble-1.2.3.dmg"), "{}", l[0]);
+    assert!(l[0].ends_with("--channel stable"), "{}", l[0]);
+    assert_eq!(l[2], "git commit -m chore: Acteble 1.2.3");
+}
+
+#[test]
+fn prod_never_makes_a_beta_cask_and_never_counts_commits() {
+    let c = case(true);
+    let (r, t, _) = go_env(Env::Prod, &c, &[], Fake::default(), forge());
+    assert!(r.is_ok(), "{}", message(&r));
+    assert!(!c.tap.path().join("Casks/acteble@beta.rb").exists());
+    assert!(t.captured.borrow().is_empty(), "no git rev-list for a stable release");
+}
+
+#[test]
+fn prod_pushes_the_tap_only_when_asked() {
+    let c = case(true);
+    let (_, t, _) = go_env(Env::Prod, &c, &[], Fake::default(), forge());
+    assert!(!t.lines().iter().any(|l| l == "git push"));
+    let (_, t, _) = go_env(Env::Prod, &c, &[("BREW_PUSH", "1")], Fake::default(), forge());
+    assert_eq!(t.lines().last().map(String::as_str), Some("git push"));
+}
+
+#[test]
+fn a_failing_stable_release_stops_before_the_bump() {
+    let c = case(true);
+    let (r, t, _) = go_env(Env::Prod, &c, &[], Fake::default(), forge().failing("create_release"));
+    assert!(message(&r).contains("creating the GitHub release"), "{}", message(&r));
+    assert!(t.runs().is_empty());
 }

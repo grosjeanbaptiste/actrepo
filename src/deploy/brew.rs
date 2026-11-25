@@ -12,9 +12,10 @@ pub fn builds_dmg(c: &Ctx) -> bool {
     c.env == Env::Test && c.vars.var("BREW_DMG").is_none() && c.vars.var("BREW_APP_URL").is_none()
 }
 
-/// prod bumps the stable cask, test the `@beta` one; test with `BREW_DMG` publishes a beta prerelease instead.
+/// prod bumps the stable cask, test the `@beta` one; with `BREW_DMG`, prod publishes the stable release
+/// and test a beta prerelease instead. prod never builds the dmg: a public release needs an explicit one.
 pub fn update(c: &mut Ctx) -> Result<()> {
-    if c.env == Env::Test && c.vars.var("BREW_DMG").is_some() {
+    if c.vars.var("BREW_DMG").is_some() {
         return brew_release::publish(c);
     }
     if builds_dmg(c) {
