@@ -42,6 +42,7 @@ Used by hand instead:
 | `gh pr list --state open --json …` | `actautoma pr list` | actautoma |
 | `gh pr edit N --base main` | `actautoma pr retarget N --base main` | actautoma |
 | `gh pr close N --comment …` | `actautoma pr close N [--comment]` | actautoma |
+| `gh pr ready N` (`actautoma pr merge` fails with "still a draft" until then; found 2026-11-24 merging actparc #11, #12) | `actautoma pr ready N`, and `pr merge` naming `pr ready` in its draft error | actautoma |
 | `git merge-tree --write-tree BASE HEAD` | `actautoma pr check N` (conflict dry run) | actautoma |
 | merge `origin/main` in a detached worktree, fix, `git push origin HEAD:B` | `actautoma resolve-conflicts N` (worktree, merge, stop on conflict, push) | actautoma |
 | push, `actrepo pr create` with the last subject, `actrepo pr merge --yes` (`ship.sh`) | `actautoma ship` (gates first, merge only where authorised) | actautoma |
@@ -67,6 +68,14 @@ When 3 branches are ahead and 3 are behind (across repositories and worktrees), 
 - **One failure never hides the others.** Every item is attempted, each outcome is read back (`branch remote`), one report line per item, exit non-zero when any item failed or was skipped.
 - **`actautoma sync-all`** (workflow): `actrepo sync`, then for each diverged branch `resolve-conflicts`, then `ship` where merging is authorised. Own ADR before code.
 - Tests first: a fixture with 3 ahead, 3 behind, 1 diverged, 1 dirty branch; a failing push must leave the pulls done and the exit code non-zero.
+
+### Central `.gitignore` (owner, 2026-11-24)
+
+`actrepo apply` skips an existing file, so a shared ignore rule never reaches a repository that already has a `.gitignore`. One source (`project-templates/common/.gitignore` in dotfiles) holds the shared rules; `actrepo apply` writes them as a block between `# >>> actrepo managed` and `# <<< actrepo managed`, replaces only that block, keeps the local lines, and `actrepo check` reports a block that differs from the source.
+
+- First rules in the source: cargo-mutants output, and `/graphify-out/*` with `!/graphify-out/GRAPH_REPORT.md` (only the report is versioned).
+- Tests first: no file (created with the block), file without the block (block appended, local lines kept), stale block (replaced, local lines kept), two blocks or an unclosed marker (error, file untouched), `check` drift, `--dry-run` writes nothing. `cargo mutants` with 0 missed.
+- Migration: each repository with tracked `graph.json` and the other generated graphify files drops them from the index (`git rm --cached`) in its own pull request.
 
 ### Order
 

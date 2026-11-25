@@ -1,5 +1,5 @@
 //! Remove each linked worktree whose branch was pushed and is now contained in
-//! `origin/<base>`, then the branch. Nothing is forced: a worktree with local
+//! `origin/<base>`, then the branch; then each such local branch no worktree holds. Nothing is forced: a worktree with local
 //! changes, an unpushed branch and the worktree `dir` itself are left alone.
 use crate::pr::after::has_changes;
 use crate::scaffold::setup::Exec;
@@ -77,7 +77,53 @@ fn merged(probe: &impl Exec, dir: &Path, branch: &str, base: &str) -> bool {
         && run(&["rev-parse", &head]).ok() != run(&["rev-parse", &remote]).ok()
 }
 
-/// Returns how many worktrees were (or, with `dry_run`, would be) removed.
+/// Local branches that no worktree (the main one included) has checked out.
+fn without_worktree(probe: &impl Exec, dir: &Path) -> Result<Vec<String>> {
+    let list = probe.run("git", &["worktree", "list", "--porcelain"], Some(dir))?;
+    let held: Vec<&str> = list
+        .lines()
+        .filter_map(|l| l.strip_prefix("branch refs/heads/"))
+        .collect();
+    let all = probe.run(
+        "git",
+        &["for-each-ref", "--format=%(refname:short)", "refs/heads"],
+        Some(dir),
+    )?;
+    Ok(all
+        .lines()
+        .filter(|b| !held.contains(b))
+        .map(str::to_string)
+        .collect())
+}
+
+/// Deletes (or, with `dry_run`, names) the merged, pushed local branches no worktree holds: what a merge made elsewhere leaves behind. Returns how many.
+fn delete_orphans(
+    probe: &impl Exec,
+    act: &impl Exec,
+    dir: &Path,
+    base: &str,
+    dry_run: bool,
+    out: &mut impl Write,
+) -> Result<usize> {
+    let mut count = 0;
+    for branch in without_worktree(probe, dir)? {
+        if branch == base || !merged(probe, dir, &branch, base) {
+            continue;
+        }
+        if dry_run {
+            writeln!(out, "would delete branch {branch}")?;
+        } else {
+            // -D: containment in origin/BASE was just checked, as for a worktree's branch
+            act.run("git", &["branch", "-D", &branch], Some(dir))
+                .with_context(|| format!("deleting {branch}"))?;
+            writeln!(out, "deleted branch {branch}")?;
+        }
+        count += 1;
+    }
+    Ok(count)
+}
+
+/// Returns how many worktrees and branches were (or, with `dry_run`, would be) removed.
 pub fn prune(
     probe: &impl Exec,
     act: &impl Exec,
@@ -133,6 +179,7 @@ pub fn prune(
             removed += 1;
         }
     }
+    removed += delete_orphans(probe, act, dir, base, dry_run, out)?;
     Ok(removed)
 }
 
