@@ -7,10 +7,18 @@ use super::tool::plain;
 use anyhow::{Context, Result, bail};
 use std::path::{Path, PathBuf};
 
+/// A beta with neither a built dmg nor a hosted artifact builds the dmg itself (export, notarize, dmg).
+pub fn builds_dmg(c: &Ctx) -> bool {
+    c.env == Env::Test && c.vars.var("BREW_DMG").is_none() && c.vars.var("BREW_APP_URL").is_none()
+}
+
 /// prod bumps the stable cask, test the `@beta` one; test with `BREW_DMG` publishes a beta prerelease instead.
 pub fn update(c: &mut Ctx) -> Result<()> {
     if c.env == Env::Test && c.vars.var("BREW_DMG").is_some() {
         return brew_release::publish(c);
+    }
+    if builds_dmg(c) {
+        return brew_release::build_and_publish(c);
     }
     let Some(url) = c.vars.var("BREW_APP_URL") else {
         bail!(

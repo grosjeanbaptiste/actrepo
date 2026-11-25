@@ -218,3 +218,29 @@ fn stale_output_that_cannot_be_cleared_stops_mas_loudly() {
     assert!(message(&o.result).starts_with("clearing "), "{}", message(&o.result));
     assert!(o.tool.runs().iter().all(|r| r.prog != "xcodebuild"));
 }
+
+#[test]
+fn a_beta_homebrew_deploy_without_a_hosted_url_or_dmg_skips_the_plain_build_and_checks_the_tap_first() {
+    let d = root();
+    let o = go(d.path(), Env::Test, Target::Homebrew, false, &[("BREW_APP_URL", "")], Fake::default());
+    assert_eq!(message(&o.result), "set BREW_TAP_DIR.");
+    assert!(o.tool.runs().is_empty(), "the pipeline builds, with its own version flags: {:?}", o.tool.lines());
+}
+
+#[test]
+fn a_prod_homebrew_deploy_still_builds_then_bumps_a_hosted_url() {
+    let d = root();
+    ok(fs::create_dir_all(d.path().join("stores/brew/Casks")));
+    let o = go(d.path(), Env::Prod, Target::Homebrew, false, &[], Fake::default());
+    assert!(o.result.is_ok(), "{}", message(&o.result));
+    assert_eq!(o.tool.runs()[0].args, ["build", "macos", "--release"]);
+}
+
+#[test]
+fn the_plan_of_a_dmg_build_names_the_three_slices() {
+    let d = root();
+    let o = go(d.path(), Env::Test, Target::Homebrew, true, &[("BREW_APP_URL", "")], Fake::default());
+    assert!(o.result.is_ok());
+    assert_eq!(o.out, format!("macOS Developer ID: flutter build + xcodebuild archive + export, notarize + staple, dmg (cwd {}) then publish homebrew to test\n", d.path().display()));
+    assert!(o.tool.runs().is_empty());
+}

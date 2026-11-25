@@ -64,3 +64,12 @@ pub fn git(c: &Ctx, tap: &Path, args: &[&str]) -> Result<()> {
         })
         .with_context(|| format!("git {} in the tap", args[0]))
 }
+
+/// `BREW_VERSION`, else the pubspec version of the project.
+pub fn base_version(c: &Ctx) -> Result<String> {
+    match c.vars.var("BREW_VERSION") {
+        Some(v) => Ok(v),
+        None => super::stores::pubspec_version(c.root)?
+            .context("cannot resolve version (set BREW_VERSION)."),
+    }
+}
