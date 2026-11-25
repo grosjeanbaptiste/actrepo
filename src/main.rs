@@ -111,6 +111,16 @@ enum Cmd {
         #[arg(long)]
         rewrite: bool,
     },
+    /// Remove the branches already merged into BASE, with their worktree and origin copy.
+    Clean {
+        #[arg(default_value = ".")]
+        path: String,
+        #[arg(long, default_value = "main")]
+        base: String,
+        /// Print what would be removed; change nothing.
+        #[arg(long)]
+        dry_run: bool,
+    },
     /// Rename a repository everywhere: platform, origin, folder, written references, registry.
     Rename {
         /// `OWNER/OLD`, or just `OLD` when it is registered (the owner is read from its origin).
@@ -548,6 +558,11 @@ fn main() -> Result<()> {
             delete_old,
             rewrite,
         } => branch::command::run(&path, &from, &to, dry_run, delete_old, rewrite),
+        Cmd::Clean {
+            path,
+            base,
+            dry_run,
+        } => branch::command::run_clean(&path, &base, dry_run),
         Cmd::Rename {
             slug,
             new,

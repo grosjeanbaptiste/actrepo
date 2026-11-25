@@ -55,3 +55,16 @@ pub fn run(
     }
     Ok(())
 }
+
+/// `actrepo clean`: the work is `actautoma::clean::clean`; this prints each step.
+pub fn run_clean(path: &str, base: &str, dry_run: bool) -> Result<()> {
+    let steps = actautoma::clean::clean(&ProcessRunner, Path::new(path), base, !dry_run)?;
+    let verb = if dry_run { "would remove" } else { "removed" };
+    for step in steps {
+        match step {
+            actautoma::clean::Step::Removed { branch } => println!("{verb} {branch}"),
+            actautoma::clean::Step::Kept { branch, reason } => println!("kept {branch}: {reason}"),
+        }
+    }
+    Ok(())
+}
