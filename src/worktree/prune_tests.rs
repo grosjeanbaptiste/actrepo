@@ -328,3 +328,73 @@ fn a_worktree_detached_at_an_older_commit_of_origin_base_goes_too() {
     assert!(ok(r) >= 1, "{out}");
     assert!(!old.exists(), "{out}");
 }
+
+/// A merged, pushed branch whose worktree is already gone: `pr merge` of a peer left it behind.
+fn orphan_branch(w: &World, name: &str, push: bool) {
+    let wt = feature(w, name, push);
+    git(
+        &w.work,
+        &["worktree", "remove", "--force", &wt.display().to_string()],
+    );
+}
+
+#[test]
+fn a_merged_branch_with_no_worktree_is_deleted() {
+    let w = world();
+    orphan_branch(&w, "gone", true);
+    merge_on_remote(&w, "gone");
+    let (r, out) = prune_in(&w, false);
+    assert_eq!(ok(r), 1, "{out}");
+    assert!(!branch_exists(&w.work, "gone"), "{out}");
+    assert!(out.contains("deleted branch gone"), "{out}");
+}
+
+#[test]
+fn dry_run_names_the_merged_branch_and_keeps_it() {
+    let w = world();
+    orphan_branch(&w, "gone", true);
+    merge_on_remote(&w, "gone");
+    let (r, out) = prune_in(&w, true);
+    assert_eq!(ok(r), 1, "{out}");
+    assert!(out.contains("would delete branch gone"), "{out}");
+    assert!(branch_exists(&w.work, "gone"));
+}
+
+#[test]
+fn an_unmerged_branch_with_no_worktree_is_kept() {
+    let w = world();
+    orphan_branch(&w, "other", true);
+    let (r, _) = prune_in(&w, false);
+    assert_eq!(ok(r), 0);
+    assert!(branch_exists(&w.work, "other"));
+}
+
+#[test]
+fn a_merged_branch_never_pushed_is_kept() {
+    let w = world();
+    orphan_branch(&w, "local", false);
+    git(&w.work, &["merge", "-q", "--no-ff", "-m", "m", "local"]);
+    git(&w.work, &["push", "-q", "origin", "main"]);
+    let (r, _) = prune_in(&w, false);
+    assert_eq!(ok(r), 0);
+    assert!(branch_exists(&w.work, "local"));
+}
+
+#[test]
+fn the_base_branch_and_the_checked_out_one_are_never_deleted() {
+    let w = world();
+    git(&w.work, &["push", "-q", "-u", "origin", "main"]);
+    let (r, _) = prune_in(&w, false);
+    assert_eq!(ok(r), 0);
+    assert!(branch_exists(&w.work, "main"));
+}
+
+#[test]
+fn dry_run_counts_and_names_a_detached_worktree_and_keeps_it() {
+    let w = world();
+    let wt = detached_at(&w, "left-over", "origin/main");
+    let (r, out) = prune_in(&w, true);
+    assert_eq!(ok(r), 1, "{out}");
+    assert!(out.contains("would remove"), "{out}");
+    assert!(wt.exists(), "{out}");
+}
