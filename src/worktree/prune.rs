@@ -67,7 +67,7 @@ fn detached_in_base(probe: &impl Exec, dir: &Path, base: &str) -> Result<Vec<Pat
     Ok(found)
 }
 
-/// Pushed once, contained in the base and not just the base itself; or never pushed but adding nothing to the base.
+/// Pushed once, contained in the base and not just the base itself; or adding nothing to the base.
 fn merged(probe: &impl Exec, dir: &Path, branch: &str, base: &str) -> bool {
     let run = |args: &[&str]| probe.run("git", args, Some(dir));
     let (head, remote) = (format!("refs/heads/{branch}"), format!("origin/{base}"));
@@ -77,9 +77,9 @@ fn merged(probe: &impl Exec, dir: &Path, branch: &str, base: &str) -> bool {
     if ancestor {
         return pushed && run(&["rev-parse", &head]).ok() != run(&["rev-parse", &remote]).ok();
     }
-    // Never pushed, with commits of its own, yet adding nothing to the base (squash-merged,
-    // reverted, or only a merge of the base): `base...branch` is empty, so nothing is lost.
-    !pushed && run(&["diff", "--quiet", &format!("{remote}...{head}")]).is_ok()
+    // With commits of its own, yet adding nothing to the base (squash-merged, reverted, or
+    // only a merge of the base): `base...branch` is empty, so nothing is lost, pushed or not.
+    run(&["diff", "--quiet", &format!("{remote}...{head}")]).is_ok()
 }
 
 /// Local branches that no worktree (the main one included) has checked out.

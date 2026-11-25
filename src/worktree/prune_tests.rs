@@ -419,3 +419,14 @@ fn a_never_pushed_branch_with_work_missing_from_the_base_is_kept() {
     assert_eq!(ok(r), 0);
     assert!(wt.exists() && branch_exists(&w.work, "local"));
 }
+
+#[test]
+fn a_pushed_branch_that_adds_nothing_to_the_base_is_removed_though_not_contained() {
+    let w = world();
+    let wt = feature(&w, "local", true);
+    git(&wt, &["reset", "-q", "--hard", "main"]);
+    git(&wt, &["commit", "-q", "--allow-empty", "-m", "nothing"]);
+    let (r, out) = prune_in(&w, false);
+    assert_eq!(ok(r), 1, "{out}");
+    assert!(!wt.exists() && !branch_exists(&w.work, "local"));
+}
