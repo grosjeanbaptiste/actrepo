@@ -1,7 +1,7 @@
 //! Without a rev: show where `dep` is pinned and fail when the repos disagree.
 //! With a rev: rewrite each Cargo.toml that has `dep`, then refresh its lock.
-use super::manifest::{rev_of, with_rev};
 use crate::scaffold::setup::Exec;
+use actautoma::pin_manifest::{rev_of, with_rev};
 use anyhow::{Context, Result, bail};
 use std::io::Write;
 use std::path::PathBuf;
