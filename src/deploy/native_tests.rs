@@ -288,3 +288,27 @@ fn a_linux_prod_deploy_ignores_the_tarball_and_stays_on_snap() {
     assert!(o.result.is_ok(), "{}", message(&o.result));
     assert_eq!(o.tool.runs().last().map(|r| r.prog.clone()).as_deref(), Some("snapcraft"));
 }
+
+#[test]
+fn a_windows_beta_with_an_msix_goes_to_the_github_beta_not_to_the_store() {
+    let d = root();
+    touch(d.path(), "a.msix");
+    let msix = d.path().join("a.msix");
+    let extra = [("BREW_WINDOWS_MSIX", msix.to_str().unwrap_or_default())];
+    let o = go(d.path(), Env::Test, Target::Windows, false, &extra, Fake { captures: vec![("git".into(), "rev-list".into(), Some("42".into()))], ..Fake::default() });
+    assert!(o.result.is_ok(), "{}", message(&o.result));
+    let l = lines(&o);
+    assert!(l.iter().any(|x| x.starts_with("flutter build windows")), "{l:?}");
+    assert!(!l.iter().any(|x| x.starts_with("msstore")), "{l:?}");
+}
+
+#[test]
+fn a_windows_prod_deploy_ignores_the_msix_and_stays_on_the_store() {
+    let d = root();
+    touch(d.path(), "build/win/app.msix");
+    let msix = d.path().join("build/win/app.msix");
+    let extra = [("BREW_WINDOWS_MSIX", msix.to_str().unwrap_or_default())];
+    let o = go(d.path(), Env::Prod, Target::Windows, false, &extra, Fake::default());
+    assert!(o.result.is_ok(), "{}", message(&o.result));
+    assert_eq!(o.tool.runs().last().map(|r| r.prog.clone()).as_deref(), Some("msstore"));
+}

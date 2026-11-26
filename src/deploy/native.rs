@@ -2,7 +2,7 @@
 use super::ctx::Ctx;
 use super::target::{Env, Target};
 use super::tool::{Call, plain};
-use super::{asc, brew, brew_linux, find, msstore, play, snap};
+use super::{asc, brew, brew_linux, find, msstore, play, snap, windows_beta};
 use anyhow::{Context, Result, bail};
 use std::fs;
 use std::io::ErrorKind;
@@ -129,6 +129,10 @@ fn publish(c: &mut Ctx, target: Target) -> Result<()> {
             brew_linux::publish(c)
         }
         Target::Linux => snap::upload(c),
+        // a beta with an .msix is the GitHub beta prerelease; anything else is the Microsoft Store
+        Target::Windows if c.env == Env::Test && c.vars.var("BREW_WINDOWS_MSIX").is_some() => {
+            windows_beta::publish(c)
+        }
         Target::Windows => msstore::upload(c),
         Target::Web => bail!("no build recipe for 'web'"),
     }
