@@ -1,5 +1,6 @@
 //! Steps of the Homebrew beta release: variables, build number, beta cask, staged dmg, git in the tap.
 use super::brew_beta::beta_cask;
+use super::brew_beta_formula::{beta_file_name, beta_formula};
 use super::ctx::Ctx;
 use super::tool::{Call, plain};
 use anyhow::{Context, Result, bail};
@@ -46,6 +47,23 @@ pub fn ensure_beta_cask(casks: &Path, name: &str) -> Result<()> {
         .with_context(|| format!("writing {}", beta.display()))
 }
 
+/// The beta formula of the tap (Linux), made from the stable one when it does not exist yet.
+pub fn ensure_beta_formula(formulas: &Path, name: &str) -> Result<()> {
+    let beta = formulas.join(beta_file_name(name));
+    if beta.exists() {
+        return Ok(());
+    }
+    let stable = formulas.join(format!("{name}.rb"));
+    if !stable.exists() {
+        bail!(
+            "no stable formula {} to make the beta formula from.",
+            stable.display()
+        );
+    }
+    fs::write(&beta, beta_formula(&fs::read_to_string(&stable)?)?)
+        .with_context(|| format!("writing {}", beta.display()))
+}
+
 /// The dmg copied under the name the cask url expects, in a folder of its own.
 pub fn stage(dmg: &Path, asset: &str, tag: &str) -> Result<PathBuf> {
     let dir = std::env::temp_dir().join(format!("actrepo-brew-{tag}"));
@@ -72,4 +90,9 @@ pub fn base_version(c: &Ctx) -> Result<String> {
         None => super::stores::pubspec_version(c.root)?
             .context("cannot resolve version (set BREW_VERSION)."),
     }
+}
+
+#[cfg(test)]
+mod tests {
+    include!("brew_steps_formula_tests.rs");
 }
