@@ -68,8 +68,7 @@ pub fn ensure_beta_formula(formulas: &Path, name: &str) -> Result<()> {
 /// The file on the beta prerelease `tag`: uploaded to it when it exists (another platform may have made it),
 /// else the prerelease is created with the file attached.
 pub fn attach_to_beta(c: &Ctx, repo: &str, release: &NewRelease) -> Result<()> {
-    let view = ["release", "view", &release.tag, "--repo", repo].map(String::from);
-    if c.tool.capture(&plain("gh", &view))?.is_none() {
+    if !c.forge.release_exists(repo, &release.tag)? {
         return c
             .forge
             .create_release(release)
@@ -79,18 +78,8 @@ pub fn attach_to_beta(c: &Ctx, repo: &str, release: &NewRelease) -> Result<()> {
         .asset
         .as_ref()
         .context("no file to attach to the prerelease.")?;
-    let args = [
-        "release",
-        "upload",
-        &release.tag,
-        &file.display().to_string(),
-        "--repo",
-        repo,
-        "--clobber",
-    ]
-    .map(String::from);
-    c.tool
-        .run(&plain("gh", &args))
+    c.forge
+        .upload_release_asset(repo, &release.tag, file)
         .context("uploading to the beta prerelease")
 }
 

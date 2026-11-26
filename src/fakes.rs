@@ -117,12 +117,20 @@ pub struct FakeForge {
     run: Option<CiRun>,
     listed: Vec<PrSummary>,
     state: PrState,
+    /// What `release_exists` answers.
+    released: bool,
     /// The operation that fails: `view`, `poll` (any view after the first), `merge`, `create`,
     /// `view_repo`, `set_default_branch`, `create_repo`, `available`, `open_prs`, `last_run`.
     fail: Option<&'static str>,
 }
 
 impl FakeForge {
+    /// A release already exists for every tag asked about.
+    pub fn with_release(mut self) -> Self {
+        self.released = true;
+        self
+    }
+
     pub fn pr(title: &str, mergeable: Mergeable) -> Self {
         let pr = PullRequest {
             number: 8,
@@ -148,6 +156,7 @@ impl FakeForge {
             run: None,
             listed: vec![],
             state: PrState::Open,
+            released: false,
             fail: None,
         }
     }
@@ -214,6 +223,16 @@ impl FakeForge {
 }
 
 impl Forge for FakeForge {
+    fn release_exists(&self, slug: &str, tag: &str) -> Result<bool, ForgeError> {
+        self.calls.borrow_mut().push(format!("release_exists {slug} {tag}"));
+        Ok(self.released)
+    }
+
+    fn upload_release_asset(&self, slug: &str, tag: &str, file: &std::path::Path) -> Result<(), ForgeError> {
+        self.calls.borrow_mut().push(format!("upload_release_asset {slug} {tag} {}", file.display()));
+        Ok(())
+    }
+
     fn view_pr(&self, number: Option<u64>) -> Result<PullRequest, ForgeError> {
         self.calls.borrow_mut().push(match number {
             Some(n) => format!("view {n}"),
