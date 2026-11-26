@@ -3,6 +3,7 @@ use super::brew_beta::beta_cask;
 use super::brew_beta_formula::{beta_file_name, beta_formula};
 use super::ctx::Ctx;
 use super::tool::{Call, plain};
+use actautoma::forge::NewRelease;
 use anyhow::{Context, Result, bail};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -62,6 +63,35 @@ pub fn ensure_beta_formula(formulas: &Path, name: &str) -> Result<()> {
     }
     fs::write(&beta, beta_formula(&fs::read_to_string(&stable)?)?)
         .with_context(|| format!("writing {}", beta.display()))
+}
+
+/// The file on the beta prerelease `tag`: uploaded to it when it exists (another platform may have made it),
+/// else the prerelease is created with the file attached.
+pub fn attach_to_beta(c: &Ctx, repo: &str, release: &NewRelease) -> Result<()> {
+    let view = ["release", "view", &release.tag, "--repo", repo].map(String::from);
+    if c.tool.capture(&plain("gh", &view))?.is_none() {
+        return c
+            .forge
+            .create_release(release)
+            .context("creating the GitHub prerelease");
+    }
+    let file = release
+        .asset
+        .as_ref()
+        .context("no file to attach to the prerelease.")?;
+    let args = [
+        "release",
+        "upload",
+        &release.tag,
+        &file.display().to_string(),
+        "--repo",
+        repo,
+        "--clobber",
+    ]
+    .map(String::from);
+    c.tool
+        .run(&plain("gh", &args))
+        .context("uploading to the beta prerelease")
 }
 
 /// The dmg copied under the name the cask url expects, in a folder of its own.

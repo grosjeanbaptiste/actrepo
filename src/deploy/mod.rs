@@ -27,6 +27,7 @@ pub mod target;
 pub mod tool;
 pub mod vars;
 pub mod web;
+pub mod windows_beta;
 
 use actautoma::forge::Forge;
 use anyhow::{Context, Result, bail};

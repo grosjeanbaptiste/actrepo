@@ -4,11 +4,12 @@
 use super::brew_beta::tag;
 use super::brew_beta_formula::bump_formula;
 use super::brew_channel::Channel;
-use super::brew_steps::{base_version, build_number, ensure_beta_formula, git, path_var, stage};
+use super::brew_steps::{
+    attach_to_beta, base_version, build_number, ensure_beta_formula, git, path_var, stage,
+};
 use super::ctx::Ctx;
 use super::macos_dmg::sha256;
 use super::target::Env;
-use super::tool::plain;
 use actautoma::forge::NewRelease;
 use anyhow::{Context, Result, bail};
 use std::fs;
@@ -36,34 +37,15 @@ pub fn publish(c: &mut Ctx) -> Result<()> {
     let tag = tag(&version);
     let sum = sha256(c, &tarball)?;
     let staged = stage(&tarball, &asset, &tag)?;
-    let view = ["release", "view", &tag, "--repo", &repo].map(String::from);
-    if c.tool.capture(&plain("gh", &view))?.is_some() {
-        let args = [
-            "release",
-            "upload",
-            &tag,
-            &staged.display().to_string(),
-            "--repo",
-            &repo,
-            "--clobber",
-        ]
-        .map(String::from);
-        c.tool
-            .run(&plain("gh", &args))
-            .context("uploading the tarball to the beta prerelease")?;
-    } else {
-        let release = NewRelease {
-            slug: repo.clone(),
-            tag: tag.clone(),
-            title: Channel::Beta.title(&app, &version, &tag),
-            notes: Channel::Beta.notes().into(),
-            prerelease: true,
-            asset: Some(staged),
-        };
-        c.forge
-            .create_release(&release)
-            .context("creating the GitHub prerelease")?;
-    }
+    let release = NewRelease {
+        slug: repo.clone(),
+        tag: tag.clone(),
+        title: Channel::Beta.title(&app, &version, &tag),
+        notes: Channel::Beta.notes().into(),
+        prerelease: true,
+        asset: Some(staged),
+    };
+    attach_to_beta(c, &repo, &release)?;
     let url = format!("https://github.com/{repo}/releases/download/{tag}/{asset}");
     let file = tap.join("Formula").join(format!("{name}@beta.rb"));
     let bumped = bump_formula(&fs::read_to_string(&file)?, &version, &url, &sum)?;
