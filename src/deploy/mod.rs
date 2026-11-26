@@ -2,7 +2,9 @@
 pub mod asc;
 pub mod brew;
 pub mod brew_beta;
+pub mod brew_beta_formula;
 pub mod brew_channel;
+pub mod brew_linux;
 pub mod brew_release;
 pub mod brew_steps;
 pub mod command;
@@ -25,6 +27,7 @@ pub mod target;
 pub mod tool;
 pub mod vars;
 pub mod web;
+pub mod windows_beta;
 
 use actautoma::forge::Forge;
 use anyhow::{Context, Result, bail};

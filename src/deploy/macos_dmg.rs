@@ -44,7 +44,8 @@ pub fn stage_app(c: &Ctx, app: &Path, stage: &Path) -> Result<()> {
         .context("linking /Applications into the stage")
 }
 
-fn sha256(c: &Ctx, dmg: &Path) -> Result<String> {
+/// The sha256 of a file, read with `shasum`.
+pub fn sha256(c: &Ctx, dmg: &Path) -> Result<String> {
     let args = ["-a", "256", &dmg.display().to_string()].map(String::from);
     let out = c
         .tool

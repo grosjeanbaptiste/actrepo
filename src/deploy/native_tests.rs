@@ -244,3 +244,71 @@ fn the_plan_of_a_dmg_build_names_the_three_slices() {
     assert_eq!(o.out, format!("macOS Developer ID: flutter build + xcodebuild archive + export, notarize + staple, dmg (cwd {}) then publish homebrew to test\n", d.path().display()));
     assert!(o.tool.runs().is_empty());
 }
+
+fn linux_beta_case() -> (tempfile::TempDir, tempfile::TempDir) {
+    let (d, tap) = (root(), ok(tempfile::tempdir()));
+    touch(d.path(), "a.tar.gz");
+    ok(fs::create_dir_all(tap.path().join("Formula")));
+    ok(fs::write(
+        tap.path().join("Formula/acteble-linux.rb"),
+        "class ActebleLinux < Formula\n  url \"u\"\n  version \"0\"\n  sha256 \"o\" # release-bumped\nend\n",
+    ));
+    (d, tap)
+}
+
+fn linux_beta_tool() -> Fake {
+    Fake {
+        captures: vec![
+            ("shasum".into(), "-a".into(), Some("ab12  a.tar.gz".into())),
+            ("git".into(), "rev-list".into(), Some("42".into())),
+        ],
+        ..Fake::default()
+    }
+}
+
+#[test]
+fn a_linux_beta_with_a_tarball_goes_to_the_homebrew_beta_not_to_snap() {
+    let (d, tap) = linux_beta_case();
+    let tar = d.path().join("a.tar.gz");
+    let extra = [("BREW_LINUX_TARBALL", tar.to_str().unwrap_or_default()), ("BREW_TAP_DIR", tap.path().to_str().unwrap_or_default())];
+    let o = go(d.path(), Env::Test, Target::Linux, false, &extra, linux_beta_tool());
+    assert!(o.result.is_ok(), "{}", message(&o.result));
+    let l = lines(&o);
+    assert!(l.iter().any(|x| x.starts_with("git commit")), "{l:?}");
+    assert!(!l.iter().any(|x| x.starts_with("snapcraft")), "{l:?}");
+}
+
+#[test]
+fn a_linux_prod_deploy_ignores_the_tarball_and_stays_on_snap() {
+    let (d, tap) = linux_beta_case();
+    touch(d.path(), "build/snap/a.snap");
+    let tar = d.path().join("a.tar.gz");
+    let extra = [("BREW_LINUX_TARBALL", tar.to_str().unwrap_or_default()), ("BREW_TAP_DIR", tap.path().to_str().unwrap_or_default())];
+    let o = go(d.path(), Env::Prod, Target::Linux, false, &extra, linux_beta_tool());
+    assert!(o.result.is_ok(), "{}", message(&o.result));
+    assert_eq!(o.tool.runs().last().map(|r| r.prog.clone()).as_deref(), Some("snapcraft"));
+}
+
+#[test]
+fn a_windows_beta_with_an_msix_goes_to_the_github_beta_not_to_the_store() {
+    let d = root();
+    touch(d.path(), "a.msix");
+    let msix = d.path().join("a.msix");
+    let extra = [("BREW_WINDOWS_MSIX", msix.to_str().unwrap_or_default())];
+    let o = go(d.path(), Env::Test, Target::Windows, false, &extra, Fake { captures: vec![("git".into(), "rev-list".into(), Some("42".into()))], ..Fake::default() });
+    assert!(o.result.is_ok(), "{}", message(&o.result));
+    let l = lines(&o);
+    assert!(l.iter().any(|x| x.starts_with("flutter build windows")), "{l:?}");
+    assert!(!l.iter().any(|x| x.starts_with("msstore")), "{l:?}");
+}
+
+#[test]
+fn a_windows_prod_deploy_ignores_the_msix_and_stays_on_the_store() {
+    let d = root();
+    touch(d.path(), "build/win/app.msix");
+    let msix = d.path().join("build/win/app.msix");
+    let extra = [("BREW_WINDOWS_MSIX", msix.to_str().unwrap_or_default())];
+    let o = go(d.path(), Env::Prod, Target::Windows, false, &extra, Fake::default());
+    assert!(o.result.is_ok(), "{}", message(&o.result));
+    assert_eq!(o.tool.runs().last().map(|r| r.prog.clone()).as_deref(), Some("msstore"));
+}

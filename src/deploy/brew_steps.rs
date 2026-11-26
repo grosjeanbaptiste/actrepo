@@ -1,7 +1,9 @@
 //! Steps of the Homebrew beta release: variables, build number, beta cask, staged dmg, git in the tap.
 use super::brew_beta::beta_cask;
+use super::brew_beta_formula::{beta_file_name, beta_formula};
 use super::ctx::Ctx;
 use super::tool::{Call, plain};
+use actautoma::forge::NewRelease;
 use anyhow::{Context, Result, bail};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -46,6 +48,52 @@ pub fn ensure_beta_cask(casks: &Path, name: &str) -> Result<()> {
         .with_context(|| format!("writing {}", beta.display()))
 }
 
+/// The beta formula of the tap (Linux), made from the stable one when it does not exist yet.
+pub fn ensure_beta_formula(formulas: &Path, name: &str) -> Result<()> {
+    let beta = formulas.join(beta_file_name(name));
+    if beta.exists() {
+        return Ok(());
+    }
+    let stable = formulas.join(format!("{name}.rb"));
+    if !stable.exists() {
+        bail!(
+            "no stable formula {} to make the beta formula from.",
+            stable.display()
+        );
+    }
+    fs::write(&beta, beta_formula(&fs::read_to_string(&stable)?)?)
+        .with_context(|| format!("writing {}", beta.display()))
+}
+
+/// The file on the beta prerelease `tag`: uploaded to it when it exists (another platform may have made it),
+/// else the prerelease is created with the file attached.
+pub fn attach_to_beta(c: &Ctx, repo: &str, release: &NewRelease) -> Result<()> {
+    let view = ["release", "view", &release.tag, "--repo", repo].map(String::from);
+    if c.tool.capture(&plain("gh", &view))?.is_none() {
+        return c
+            .forge
+            .create_release(release)
+            .context("creating the GitHub prerelease");
+    }
+    let file = release
+        .asset
+        .as_ref()
+        .context("no file to attach to the prerelease.")?;
+    let args = [
+        "release",
+        "upload",
+        &release.tag,
+        &file.display().to_string(),
+        "--repo",
+        repo,
+        "--clobber",
+    ]
+    .map(String::from);
+    c.tool
+        .run(&plain("gh", &args))
+        .context("uploading to the beta prerelease")
+}
+
 /// The dmg copied under the name the cask url expects, in a folder of its own.
 pub fn stage(dmg: &Path, asset: &str, tag: &str) -> Result<PathBuf> {
     let dir = std::env::temp_dir().join(format!("actrepo-brew-{tag}"));
@@ -72,4 +120,9 @@ pub fn base_version(c: &Ctx) -> Result<String> {
         None => super::stores::pubspec_version(c.root)?
             .context("cannot resolve version (set BREW_VERSION)."),
     }
+}
+
+#[cfg(test)]
+mod tests {
+    include!("brew_steps_formula_tests.rs");
 }

@@ -1,8 +1,8 @@
 //! Build with flutter, then publish to the platform's store (port of `project_deploy_native`).
 use super::ctx::Ctx;
-use super::target::Target;
+use super::target::{Env, Target};
 use super::tool::{Call, plain};
-use super::{asc, brew, find, msstore, play, snap};
+use super::{asc, brew, brew_linux, find, msstore, play, snap, windows_beta};
 use anyhow::{Context, Result, bail};
 use std::fs;
 use std::io::ErrorKind;
@@ -124,7 +124,15 @@ fn publish(c: &mut Ctx, target: Target) -> Result<()> {
         }
         Target::Android => play::upload(c),
         Target::Homebrew => brew::update(c),
+        // a beta with a tarball is the Homebrew beta; anything else is the Snap Store
+        Target::Linux if c.env == Env::Test && c.vars.var("BREW_LINUX_TARBALL").is_some() => {
+            brew_linux::publish(c)
+        }
         Target::Linux => snap::upload(c),
+        // a beta with an .msix is the GitHub beta prerelease; anything else is the Microsoft Store
+        Target::Windows if c.env == Env::Test && c.vars.var("BREW_WINDOWS_MSIX").is_some() => {
+            windows_beta::publish(c)
+        }
         Target::Windows => msstore::upload(c),
         Target::Web => bail!("no build recipe for 'web'"),
     }
