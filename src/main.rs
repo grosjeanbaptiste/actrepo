@@ -287,6 +287,11 @@ enum Cmd {
         #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
         args: Vec<String>,
     },
+    /// Bump a git dependency in every repository that pins it, one pull request each: `actrepo pin-propagate DEP [--rev REV] [--root DIR] [--gate "CMD"] [--dry-run] [--merge]` (actautoma's verb).
+    PinPropagate {
+        #[arg(trailing_var_arg = true, allow_hyphen_values = true)]
+        args: Vec<String>,
+    },
     /// Candidates for the shell completion (used by `actrepo completions`).
     #[command(
         name = "__complete",
@@ -538,6 +543,15 @@ fn main() -> Result<()> {
             let env = |key: &str| std::env::var(key).ok();
             let cwd = std::env::current_dir().context("no current folder")?;
             let args: Vec<String> = ["move".to_string()].into_iter().chain(args).collect();
+            orchestrate::actautoma(&args, &cwd, &env, &mut std::io::stdout().lock())
+        }
+        Cmd::PinPropagate { args } => {
+            let env = |key: &str| std::env::var(key).ok();
+            let cwd = std::env::current_dir().context("no current folder")?;
+            let args: Vec<String> = ["pin-propagate".to_string()]
+                .into_iter()
+                .chain(args)
+                .collect();
             orchestrate::actautoma(&args, &cwd, &env, &mut std::io::stdout().lock())
         }
         Cmd::Complete { words } => device::command::complete(&words),

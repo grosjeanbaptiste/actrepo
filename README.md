@@ -82,6 +82,7 @@ actrepo deploy ENV TARGET [PATH] [--project N] [-y] [--dry-run] [--store-page]  
 actrepo run NAME-OR-DIR [VERB [ARGS...]]               # run a Makefile target, melos script or cargo/flutter command (publish = actrepo deploy/release); no VERB lists them
 actrepo doctor [PATH]                                 # one-glance health: git, open PRs and CI (gh via actautoma), TODO/FIXME, licence, audit
 actrepo audit [PATH]                                  # env vars / CI secrets a project references, and where each is fulfilled
+actrepo pin-propagate DEP [--rev REV] [--root DIR] [--gate "CMD"] [--dry-run] [--merge] # actautoma's verb: bump DEP in every repository that pins it, one pull request each, in dependency order
 actrepo pin DEP [REV]                                  # where a git dependency is pinned across the workspace repos (fails when they differ); with a full 40-character REV, pins them all to it
 actrepo completions zsh|bash                           # completion script: eval "$(actrepo completions zsh)"
 actrepo <other command> …                              # forwarded to `dotfiles project` (e.g. `tex`)

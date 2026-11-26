@@ -93,3 +93,39 @@ fn repo_move_finds_the_repositories_itself_and_a_dry_run_changes_nothing() {
     );
     assert!(group.join("a/.git").is_dir() && !base.path().join("into/group").exists());
 }
+
+#[test]
+fn repo_pin_propagate_without_a_dependency_prints_the_usage_of_actautoma() {
+    let o = repo(&["pin-propagate"]);
+    assert!(!o.status.success());
+    assert!(
+        stderr(&o).contains("usage: actautoma pin-propagate"),
+        "{}",
+        stderr(&o)
+    );
+}
+
+#[test]
+fn repo_pin_propagate_dry_run_names_each_consumer_and_changes_nothing() {
+    let base = tempfile::tempdir().unwrap_or_else(|e| panic!("{e}"));
+    let dir = base.path().join("alpha");
+    std::fs::create_dir_all(&dir).unwrap_or_else(|e| panic!("{e}"));
+    let old = "1".repeat(40);
+    let manifest = format!(
+        "[package]\nname = \"alpha\"\nversion = \"0.1.0\"\n\n[dependencies]\nactit = {{ git = \"https://github.com/o/actit\", rev = \"{old}\" }}\n"
+    );
+    std::fs::write(dir.join("Cargo.toml"), &manifest).unwrap_or_else(|e| panic!("{e}"));
+    let o = repo(&[
+        "pin-propagate",
+        "actit",
+        "--rev",
+        &"2".repeat(40),
+        "--root",
+        base.path().to_str().unwrap_or_default(),
+        "--dry-run",
+    ]);
+    assert!(o.status.success(), "{}", stderr(&o));
+    assert!(stdout(&o).contains("alpha: planned"), "{}", stdout(&o));
+    let after = std::fs::read_to_string(dir.join("Cargo.toml")).unwrap_or_default();
+    assert_eq!(after, manifest);
+}
