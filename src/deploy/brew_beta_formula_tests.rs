@@ -71,3 +71,34 @@ fn a_beta_formula_is_not_made_into_a_beta_again() {
 fn the_beta_file_is_named_after_the_stable_one() {
     assert_eq!(beta_file_name("acteble-linux"), "acteble-linux@beta.rb");
 }
+
+const BUMPABLE: &str = "class ActebleLinuxATBeta < Formula\n  url \"https://h/download/v0.0.0/acteble-linux-x86_64.tar.gz\"\n  version \"0.0.0\"\n  sha256 \"old\" # release-bumped\n  depends_on :linux\nend\n";
+
+fn bumped() -> String {
+    bump_formula(BUMPABLE, "1.2.3-beta.42", "https://h/download/v1.2.3-beta.42/acteble-linux-x86_64.tar.gz", "ab12")
+        .unwrap_or_else(|e| panic!("{e}"))
+}
+
+#[test]
+fn a_bump_sets_the_url_the_version_and_the_checksum() {
+    let b = bumped();
+    assert!(b.contains("  url \"https://h/download/v1.2.3-beta.42/acteble-linux-x86_64.tar.gz\"\n"), "{b}");
+    assert!(b.contains("  version \"1.2.3-beta.42\"\n"), "{b}");
+    assert!(b.contains("  sha256 \"ab12\" # release-bumped\n"), "{b}");
+}
+
+#[test]
+fn a_bump_leaves_every_other_line_as_it_was() {
+    let b = bumped();
+    assert!(b.starts_with("class ActebleLinuxATBeta < Formula\n"), "{b}");
+    assert!(b.ends_with("  depends_on :linux\nend\n"), "{b}");
+    assert_eq!(b.lines().count(), BUMPABLE.lines().count());
+}
+
+#[test]
+fn a_formula_without_a_checksum_marker_is_refused_by_name() {
+    let e = bump_formula("class A < Formula\n  url \"u\"\n  version \"1\"\nend\n", "2", "u2", "x")
+        .err()
+        .map(|e| e.to_string());
+    assert_eq!(e.as_deref(), Some("formula has no `sha256 \"…\" # release-bumped` line to bump."));
+}

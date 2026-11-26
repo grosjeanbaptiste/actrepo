@@ -46,6 +46,31 @@ pub fn beta_formula(stable: &str) -> Result<String> {
     Ok(out)
 }
 
+/// A release of the formula: `url`, `version` and the `# release-bumped` checksum line replaced, the rest kept.
+pub fn bump_formula(formula: &str, version: &str, url: &str, sha256: &str) -> Result<String> {
+    if !formula
+        .lines()
+        .any(|l| l.trim_start().starts_with("sha256 \"") && l.contains("# release-bumped"))
+    {
+        bail!("formula has no `sha256 \"…\" # release-bumped` line to bump.");
+    }
+    let mut out = String::new();
+    for line in formula.lines() {
+        let t = line.trim_start();
+        out.push_str(&if t.starts_with("url \"") {
+            format!("  url \"{url}\"")
+        } else if t.starts_with("version \"") {
+            format!("  version \"{version}\"")
+        } else if t.starts_with("sha256 \"") && line.contains("# release-bumped") {
+            format!("  sha256 \"{sha256}\" # release-bumped")
+        } else {
+            line.to_string()
+        });
+        out.push('\n');
+    }
+    Ok(out)
+}
+
 fn beta_line(line: &str, class: &str, name: &str) -> String {
     if class_name(line).is_some() {
         return format!(
