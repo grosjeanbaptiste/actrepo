@@ -1,8 +1,7 @@
 //! Build with flutter, then publish to the platform's store (port of `project_deploy_native`).
 use super::ctx::Ctx;
-use super::target::Target;
+use super::target::{Env, Target};
 use super::tool::{Call, plain};
-use super::target::Env;
 use super::{asc, brew, brew_linux, find, msstore, play, snap};
 use anyhow::{Context, Result, bail};
 use std::fs;
