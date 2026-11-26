@@ -2,7 +2,8 @@
 use super::ctx::Ctx;
 use super::target::Target;
 use super::tool::{Call, plain};
-use super::{asc, brew, find, msstore, play, snap};
+use super::target::Env;
+use super::{asc, brew, brew_linux, find, msstore, play, snap};
 use anyhow::{Context, Result, bail};
 use std::fs;
 use std::io::ErrorKind;
@@ -124,6 +125,10 @@ fn publish(c: &mut Ctx, target: Target) -> Result<()> {
         }
         Target::Android => play::upload(c),
         Target::Homebrew => brew::update(c),
+        // a beta with a tarball is the Homebrew beta; anything else is the Snap Store
+        Target::Linux if c.env == Env::Test && c.vars.var("BREW_LINUX_TARBALL").is_some() => {
+            brew_linux::publish(c)
+        }
         Target::Linux => snap::upload(c),
         Target::Windows => msstore::upload(c),
         Target::Web => bail!("no build recipe for 'web'"),
