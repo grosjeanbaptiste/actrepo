@@ -5,7 +5,7 @@ use actit::forge_names::ForgeNames;
 use actrepo::{
     audit, branch, build, delegate, deploy, device, docpaths, doctor, hook, install, license,
     naming, need, orchestrate, pin, pipeline, pr, push, registry, release, rename, root, run,
-    scaffold, sync, workspace, worktree,
+    scaffold, skills, sync, workspace, worktree,
 };
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
@@ -262,6 +262,11 @@ enum Cmd {
         #[command(subcommand)]
         sub: HookCmd,
     },
+    /// Skills the registered repositories ship: `link` makes them visible in ~/.claude/skills.
+    Skills {
+        #[command(subcommand)]
+        sub: SkillsCmd,
+    },
     /// Linked worktrees: remove the ones whose branch is merged.
     Worktree {
         #[command(subcommand)]
@@ -402,6 +407,19 @@ enum PrStateArg {
 }
 
 #[derive(Subcommand)]
+enum SkillsCmd {
+    /// Link the named skills of the registered repositories into ~/.claude/skills (never replaces anything).
+    Link {
+        /// Skills to link, by name.
+        #[arg(required = true)]
+        names: Vec<String>,
+        /// Say what would be linked; touch nothing.
+        #[arg(long, short = 'n')]
+        dry_run: bool,
+    },
+}
+
+#[derive(Subcommand)]
 enum WsCmd {
     /// Show the folders.
     List,
@@ -444,6 +462,9 @@ fn main() -> Result<()> {
             }),
             PrCmd::Retarget { number, base } => pr::command::run_retarget(number, &base),
             PrCmd::Close { number, comment } => pr::command::run_close(number, comment.as_deref()),
+        },
+        Cmd::Skills { sub } => match sub {
+            SkillsCmd::Link { names, dry_run } => skills::command::run_link(&names, dry_run),
         },
         Cmd::Hook { sub } => match sub {
             HookCmd::Install { dir, dry_run } => {
