@@ -1,4 +1,4 @@
-//! `actrepo worktree new` end to end: the folder is printed, exists, and the branch tracks nothing.
+//! `actrepo worktree new` end to end: the folder is printed, exists, and the branch is pushed.
 use std::fs;
 use std::path::Path;
 use std::process::Command;
@@ -54,6 +54,9 @@ fn it_prints_the_new_worktree_and_creates_it() {
     assert_eq!(
         git(Path::new(&printed), &["branch", "--show-current"]),
         "feat/x"
+    );
+    assert!(
+        git(&work, &["ls-remote", "--heads", "origin", "feat/x"]).ends_with("refs/heads/feat/x")
     );
 }
 
