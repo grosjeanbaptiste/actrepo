@@ -5,7 +5,7 @@ version = 4
 [[package]]
 name = "actautoma"
 version = "0.1.0"
-source = "git+https://github.com/grosjeanbaptiste/actautoma?rev=1d750fde50cba2897a460dd8c73986c75e4e466b#1d750fde50cba2897a460dd8c73986c75e4e466b"
+source = "git+https://github.com/grosjeanbaptiste/actautoma?rev=31d82c240c39628a3927c016c780e52f1ba658ff#31d82c240c39628a3927c016c780e52f1ba658ff"
 dependencies = [
  "actpath",
  "serde_json",
