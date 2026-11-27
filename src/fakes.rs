@@ -224,12 +224,22 @@ impl FakeForge {
 
 impl Forge for FakeForge {
     fn release_exists(&self, slug: &str, tag: &str) -> Result<bool, ForgeError> {
-        self.calls.borrow_mut().push(format!("release_exists {slug} {tag}"));
+        self.calls
+            .borrow_mut()
+            .push(format!("release_exists {slug} {tag}"));
         Ok(self.released)
     }
 
-    fn upload_release_asset(&self, slug: &str, tag: &str, file: &std::path::Path) -> Result<(), ForgeError> {
-        self.calls.borrow_mut().push(format!("upload_release_asset {slug} {tag} {}", file.display()));
+    fn upload_release_asset(
+        &self,
+        slug: &str,
+        tag: &str,
+        file: &std::path::Path,
+    ) -> Result<(), ForgeError> {
+        self.calls.borrow_mut().push(format!(
+            "upload_release_asset {slug} {tag} {}",
+            file.display()
+        ));
         Ok(())
     }
 
