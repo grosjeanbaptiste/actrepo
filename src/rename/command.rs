@@ -110,6 +110,7 @@ pub fn run(
     let executed = execute(&plan, &Gh::new(ProcessRunner), &ProcessRunner);
     if let Ok(out) = &executed {
         report(&plan, out);
+        crate::parc::follow_and_warn(&plan.old_dir, &plan.new_dir());
     }
     let warnings = settle(
         &entries,
