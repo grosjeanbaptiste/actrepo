@@ -4,7 +4,7 @@ use actautoma::{gh::Gh, process::ProcessRunner};
 use actit::forge_names::ForgeNames;
 use actrepo::{
     audit, branch, build, delegate, deploy, device, docpaths, doctor, hook, install, license,
-    naming, need, orchestrate, pin, pipeline, pr, push, registry, release, rename, root, run,
+    naming, need, orchestrate, parc, pin, pipeline, pr, push, registry, release, rename, root, run,
     scaffold, skills, sync, workspace, worktree,
 };
 use anyhow::{Context, Result};
@@ -563,8 +563,13 @@ fn main() -> Result<()> {
         Cmd::Move { args } => {
             let env = |key: &str| std::env::var(key).ok();
             let cwd = std::env::current_dir().context("no current folder")?;
+            let target = parc::move_target(&args, &cwd); // the folder is gone once it moved
             let args: Vec<String> = ["move".to_string()].into_iter().chain(args).collect();
-            orchestrate::actautoma(&args, &cwd, &env, &mut std::io::stdout().lock())
+            orchestrate::actautoma(&args, &cwd, &env, &mut std::io::stdout().lock())?;
+            if let Some((old, new)) = target {
+                parc::follow_and_warn(&old, &new);
+            }
+            Ok(())
         }
         Cmd::PinPropagate { args } => {
             let env = |key: &str| std::env::var(key).ok();
