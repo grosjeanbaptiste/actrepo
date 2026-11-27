@@ -3,4 +3,5 @@ pub mod command;
 pub mod detach;
 pub mod install;
 pub mod line;
+pub mod secrets;
 pub mod sync;

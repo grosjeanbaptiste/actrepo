@@ -315,7 +315,8 @@ enum Cmd {
 
 #[derive(Subcommand)]
 enum HookCmd {
-    /// Write the post-commit hook in the repository of DIR (never replaces another hook).
+    /// Write the post-commit, pre-commit and pre-push hooks in the repository of DIR
+    /// (never replaces another hook).
     Install {
         #[arg(default_value = ".")]
         dir: String,
@@ -327,6 +328,12 @@ enum HookCmd {
     Run,
     /// Fast-forward the current branch from origin and push it, now, in the foreground.
     Sync,
+    /// What the pre-commit and pre-push hooks call: refuse a secret, through gitleaks.
+    Secrets {
+        /// Scan the staged changes (pre-commit) instead of the commits no remote holds (pre-push).
+        #[arg(long)]
+        staged: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -472,6 +479,7 @@ fn main() -> Result<()> {
             }
             HookCmd::Run => hook::command::run_detached(),
             HookCmd::Sync => hook::command::run_sync(),
+            HookCmd::Secrets { staged } => hook::command::run_secrets(staged),
         },
         Cmd::Sync {
             dir,
