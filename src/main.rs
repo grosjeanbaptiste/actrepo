@@ -4,7 +4,7 @@ use actautoma::{gh::Gh, process::ProcessRunner};
 use actit::forge_names::ForgeNames;
 use actrepo::{
     audit, branch, build, delegate, deploy, device, docpaths, doctor, hook, install, license,
-    naming, need, orchestrate, pin, pipeline, pr, push, registry, release, rename, root, run,
+    naming, need, orchestrate, pin, pipeline, pr, push, registry, release, relocate, rename, root, run,
     scaffold, sync, workspace, worktree,
 };
 use anyhow::{Context, Result};
@@ -127,6 +127,16 @@ enum Cmd {
         #[arg(long)]
         local_only: bool,
         /// Print the renames; change nothing.
+        #[arg(long)]
+        dry_run: bool,
+    },
+    /// Move a repository's folder under another parent, repairing its worktrees and registry row.
+    Move {
+        /// A registered name, or the folder path when the name is held by several folders.
+        target: String,
+        /// The parent folder the repository moves into; its folder name is kept.
+        into: String,
+        /// Print the move; change nothing.
         #[arg(long)]
         dry_run: bool,
     },
@@ -563,6 +573,11 @@ fn main() -> Result<()> {
             local_only,
             dry_run,
         ),
+        Cmd::Move {
+            target,
+            into,
+            dry_run,
+        } => relocate::command::run(&target, &into, dry_run),
         Cmd::List { json } => registry::command::run_list(json),
         Cmd::Scan { roots } => registry::command::run_scan(&roots),
         Cmd::Status { name, json } => registry::command::run_status(name.as_deref(), json),
