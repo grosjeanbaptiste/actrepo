@@ -56,11 +56,29 @@ fn the_worktree_goes_under_dot_worktrees_named_after_the_branch() {
 }
 
 #[test]
-fn the_new_branch_tracks_nothing_so_pull_never_merges_main_into_it() {
+fn the_new_branch_tracks_its_own_remote_branch_never_the_base() {
     let (_d, work) = world();
     let path = ok(create(&Process, &work, "feat/x", "main"));
-    let o = git_out(&path, &["config", "--get", "branch.feat/x.merge"]);
-    assert!(!o.status.success(), "upstream set: {}", String::from_utf8_lossy(&o.stdout));
+    assert_eq!(git(&path, &["config", "--get", "branch.feat/x.merge"]), "refs/heads/feat/x");
+    assert_eq!(git(&path, &["config", "--get", "branch.feat/x.remote"]), "origin");
+}
+
+#[test]
+fn the_remote_branch_exists_at_the_base_commit_once_created() {
+    let (_d, work) = world();
+    ok(create(&Process, &work, "feat/x", "main"));
+    let listed = git(&work, &["ls-remote", "--heads", "origin", "feat/x"]);
+    let base = git(&work, &["rev-parse", "origin/main"]);
+    assert_eq!(listed, format!("{base}\trefs/heads/feat/x"));
+}
+
+#[test]
+fn a_failed_push_is_an_error_naming_the_branch_and_the_worktree_is_kept() {
+    let (d, work) = world();
+    ok(fs::remove_dir_all(d.path().join("remote.git")));
+    let e = format!("{:#}", bad(create(&Process, &work, "feat/x", "main")));
+    assert!(e.contains("feat/x") && e.contains("push"), "{e}");
+    assert!(work.join(".worktrees/feat-x").exists());
 }
 
 #[test]

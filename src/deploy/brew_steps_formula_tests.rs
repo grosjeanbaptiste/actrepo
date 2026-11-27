@@ -34,7 +34,10 @@ fn an_existing_beta_formula_is_left_alone() {
 #[test]
 fn without_a_stable_formula_it_fails_and_names_it() {
     let d = tap();
-    let e = ensure_beta_formula(&d.path().join("Formula"), "acteble-linux").unwrap_err();
+    let e = match ensure_beta_formula(&d.path().join("Formula"), "acteble-linux") {
+        Ok(_) => panic!("expected an error"),
+        Err(e) => e,
+    };
     assert!(e.to_string().contains("acteble-linux.rb"), "{e}");
 }
 
