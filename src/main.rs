@@ -340,7 +340,7 @@ enum WtCmd {
         #[arg(long)]
         owners: bool,
     },
-    /// Create a worktree under .worktrees on a new branch cut from origin/BASE, tracking nothing.
+    /// Create a worktree under .worktrees on a new branch cut from origin/BASE, pushed to origin and tracking it.
     New {
         branch: String,
         #[arg(long, default_value = "main")]

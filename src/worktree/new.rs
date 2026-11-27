@@ -1,6 +1,6 @@
 //! `actrepo worktree new BRANCH`: a linked worktree on a new branch cut from `origin/<base>`.
-//! The branch tracks nothing: git would otherwise track `origin/<base>`, and a `git pull` in the
-//! worktree would merge the base into the work.
+//! The branch is added with `--no-track` (git would otherwise track `origin/<base>`, and a `git
+//! pull` would merge the base into the work), then pushed with `-u`: it tracks its own remote copy.
 use crate::scaffold::setup::Exec;
 use anyhow::{Context, Result};
 use std::path::{Path, PathBuf};
@@ -37,6 +37,15 @@ pub fn create(act: &impl Exec, dir: &Path, branch: &str, base: &str) -> Result<P
         Some(dir),
     )
     .with_context(|| format!("cannot create branch {branch} from {from}"))?;
+    // The branch exists on the remote from its first second, and tracks that copy: a bare
+    // `git push` or `git pull` in the worktree then acts on the branch, never on the base.
+    act.run("git", &["push", "-u", "origin", branch], Some(&path))
+        .with_context(|| {
+            format!(
+                "worktree {} created but cannot push branch {branch} to origin",
+                path.display()
+            )
+        })?;
     Ok(path)
 }
 
