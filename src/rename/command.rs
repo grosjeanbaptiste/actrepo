@@ -1,4 +1,5 @@
 //! `actrepo rename`, wired to the real machine and, through actautoma, the hosting platform.
+use super::dirty::{ensure_clean, git_dirty_trees};
 use super::plan::{Machine, Request, build};
 use super::settle::settle;
 use super::slug::qualify;
@@ -77,6 +78,7 @@ pub fn run(
     into: Option<&str>,
     local_only: bool,
     dry_run: bool,
+    allow_dirty: bool,
 ) -> Result<()> {
     let machine = machine()?;
     let file = machine.state.join("projects.txt");
@@ -99,6 +101,8 @@ pub fn run(
     let planned = build(&req, &entries, &machine, &|p| p.is_dir())?;
     planned.warnings.iter().for_each(|w| eprintln!("warn: {w}"));
     let plan = planned.plan;
+    // plan.roots[0] is the renamed repository itself: its own changes travel with it
+    ensure_clean(&plan.roots[1..], &git_dirty_trees, allow_dirty)?;
     if dry_run {
         check(&plan)?;
         plan.renames()

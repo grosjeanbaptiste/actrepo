@@ -139,6 +139,9 @@ enum Cmd {
         /// Print the renames; change nothing.
         #[arg(long)]
         dry_run: bool,
+        /// Rewrite references even in trees that hold uncommitted changes.
+        #[arg(long)]
+        allow_dirty: bool,
     },
     /// List the registered projects (name and path).
     List {
@@ -618,6 +621,7 @@ fn main() -> Result<()> {
             into,
             local_only,
             dry_run,
+            allow_dirty,
         } => rename::command::run(
             &slug,
             &new,
@@ -625,6 +629,7 @@ fn main() -> Result<()> {
             into.as_deref(),
             local_only,
             dry_run,
+            allow_dirty,
         ),
         Cmd::List { json } => registry::command::run_list(json),
         Cmd::Scan { roots } => registry::command::run_scan(&roots),
