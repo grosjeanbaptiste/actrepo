@@ -13,7 +13,7 @@ description: Manage git repositories on this machine with the actrepo CLI: creat
 - Merge a pull request: `actrepo pr merge <N> --yes`. It verifies the merge, fast-forwards the base, removes the merged worktree and branch, and triggers `actinstall`.
 - Remove merged worktrees: `actrepo worktree prune [--base main] [-n]`.
 - Create a pull request: `actrepo pr create`.
-- Rename: `actrepo rename OWNER/OLD NEW [--dir D] [--dry-run]`. Move a folder: `actrepo move DIR --into PARENT [--dry-run]`.
+- Rename: `actrepo rename OWNER/OLD NEW [--dir D] [--dry-run] [--allow-dirty]` (refuses to rewrite trees with uncommitted changes unless `--allow-dirty`). Move a folder: `actrepo move DIR --into PARENT [--dry-run]`.
 - Bump a shared git dependency everywhere: `actrepo pin-propagate DEP [--rev REV] [--gate "CMD"] [--dry-run] [--merge]` (actautoma's verb; one PR per repository, dependants after what they pin; always `--dry-run` first).
 - Secret scan on every commit and push: `actrepo hook install [DIR]` (needs `gitleaks`: `dotfiles add gitleaks`); never `--no-verify`.
 - Status: `actrepo status [NAME]`; health report: `actrepo doctor [PATH]`; list: `actrepo list`.

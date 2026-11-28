@@ -57,7 +57,7 @@ actrepo list [--json] | scan [ROOT...] | status [NAME] [--json]   # machine-wide
 actrepo actit "<need>" | --name N [--owner O] [--contains]   # actit in-process: does a tool exist / is a repository name taken (exit 0, 1; 2 is an error)
 actrepo actname generate --prefix act --domain "<words>" [...]   # actname in-process: propose names
 actrepo actautoma rename-repo OWNER/OLD NEW [--dir D] [--dry-run] # actautoma in-process (what `actrepo rename` wraps)
-actrepo rename OWNER/OLD NEW [--dir DIR] [--into PARENT] [--local-only] [--dry-run]   # a repository renamed everywhere: platform, origin, folder, written references, registry row
+actrepo rename OWNER/OLD NEW [--dir DIR] [--into PARENT] [--local-only] [--dry-run] [--allow-dirty]   # a repository renamed everywhere: platform, origin, folder, written references, registry row; refuses to rewrite a tree or worktree with uncommitted changes unless --allow-dirty
 actrepo move DIR --into PARENT [--fleet DIR]... [--dry-run]   # a folder and every repository under it (worktrees included) moved in one step; repos found by scanning, every path written in them corrected (actautoma move)
 actrepo rename-branch [PATH] [--from master] [--to main] [--dry-run] [--delete-old] [--rewrite]   # default branch, local + GitHub; --rewrite edits the references in tracked files (all of `.github/`, `origin/OLD`, `heads/OLD`, "OLD branch" elsewhere), the rest stays a `warn:` line; nothing is committed
 actrepo push [--dir PATH] [--dry-run] [--yes]      # push every nested repo that is clean and ahead; asks first
