@@ -33,6 +33,10 @@ fn run(dir: &Path, actparc: &Path, args: &[&str]) -> Output {
         .env("HOME", dir)
         .env("DOTFILES_STATE_ROOT", dir.join("state"))
         .env("ACTREPO_ACTPARC", actparc)
+        // rename rewrites the old name under these roots: never the real checkouts
+        .env("DOTFILES_REPO_ROOT", dir.join("no-dotfiles"))
+        .env_remove("PROJECT_REPO_ROOT")
+        .env("CARGO_HOME", dir.join("cargo"))
         .output())
 }
 
